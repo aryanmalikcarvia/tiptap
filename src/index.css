@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+.tiptap {
+  border: 3px solid black;
+  min-height: 50px;
+  outline: none;
+}
+
+.tiptap h1 {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.tiptap h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.tiptap h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+}
+
+.tiptap h4 {
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.tiptap h5 {
+  font-size: 0.83em;
+  font-weight: bold;
+}
+
+.tiptap h6 {
+  font-size: 0.67em;
+  font-weight: bold;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+  padding-left: 2rem;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+  padding-left: 2rem;
+}
+
+.tiptap blockquote {
+  border-left: 3px solid black;
+  padding-left: 1rem;
+}
+
