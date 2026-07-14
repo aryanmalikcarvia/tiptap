@@ -1,0 +1,52 @@
+.tiptap-video-node {
+  margin: 1.25rem 0;
+}
+
+.tiptap-video-node.is-empty {
+  padding: 1rem;
+  border: 1px dashed var(--tt-gray-light-a-300);
+  border-radius: 0.75rem;
+  color: var(--tt-gray-light-a-500);
+}
+
+.dark .tiptap-video-node.is-empty {
+  border-color: var(--tt-gray-dark-a-300);
+  color: var(--tt-gray-dark-a-500);
+}
+
+.tiptap-video-frame {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 40rem;
+}
+
+.tiptap-video-player {
+  display: block;
+  width: 100%;
+  border-radius: 0.75rem;
+  background: #0b0b0c;
+}
+
+.tiptap-media-delete {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: rgba(15, 15, 15, 0.72);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.tiptap-media-delete:hover {
+  background: #dc2626;
+  transform: scale(1.04);
+}

@@ -1,12 +1,11 @@
-import NewPost from "./components/blog/NewPost"
+import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 
 function App() {
-
   return (
-    <>
-    <NewPost/>
-    </>
-  )
+    <div className="app-shell">
+      <SimpleEditor />
+    </div>
+  );
 }
 
-export default App
+export default App;

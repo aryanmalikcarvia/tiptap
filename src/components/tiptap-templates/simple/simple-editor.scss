@@ -1,0 +1,134 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+body {
+  --tt-toolbar-height: 44px;
+  --tt-theme-text: var(--tt-gray-light-900);
+
+  .dark & {
+    --tt-theme-text: var(--tt-gray-dark-900);
+  }
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  color: var(--tt-theme-text);
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  padding: 0;
+  margin: 0;
+  overscroll-behavior-y: none;
+}
+
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
+html,
+body,
+#root,
+#app {
+  min-height: 100%;
+  background-color: var(--tt-bg-color);
+}
+
+::-webkit-scrollbar {
+  width: 0.25rem;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tt-scrollbar-color) transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--tt-scrollbar-color);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tiptap.ProseMirror {
+  font-family: "DM Sans", sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+  width: 100%;
+  overflow-y: auto;
+  background:
+    radial-gradient(
+      ellipse 90% 55% at 50% -8%,
+      color-mix(in srgb, var(--tt-brand-color-500) 10%, transparent),
+      transparent 60%
+    ),
+    var(--tt-bg-color);
+}
+
+.dark .app-shell {
+  background:
+    radial-gradient(
+      ellipse 90% 55% at 50% -8%,
+      color-mix(in srgb, var(--tt-brand-color-400) 14%, transparent),
+      transparent 60%
+    ),
+    var(--tt-bg-color);
+}
+
+.simple-editor-wrapper {
+  width: 100%;
+  min-height: 58vh;
+  height: auto;
+  overflow: visible;
+}
+
+.simple-editor-content {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor {
+  flex: 1;
+  margin: 1.25rem 0 0.5rem;
+  padding: 2.25rem 2rem 2.5rem;
+  border: 1px solid var(--tt-gray-light-a-200);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--tt-bg-color) 88%, white);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--tt-theme-text) 4%, transparent),
+    0 18px 40px color-mix(in srgb, var(--tt-theme-text) 5%, transparent);
+  min-height: 22rem;
+}
+
+.dark .simple-editor-content .tiptap.ProseMirror.simple-editor {
+  border-color: var(--tt-gray-dark-a-200);
+  background: color-mix(in srgb, var(--tt-bg-color) 92%, #1a1a1c);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 4%, transparent),
+    0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.simple-editor-content .tiptap.ProseMirror.simple-editor h1 {
+  letter-spacing: -0.03em;
+}
+
+@media screen and (max-width: 640px) {
+  .simple-editor-content {
+    padding: 0 0.75rem;
+  }
+
+  .simple-editor-content .tiptap.ProseMirror.simple-editor {
+    margin-top: 0.75rem;
+    padding: 1.25rem 1rem 1.75rem;
+    border-radius: 0.85rem;
+    min-height: 16rem;
+  }
+}
