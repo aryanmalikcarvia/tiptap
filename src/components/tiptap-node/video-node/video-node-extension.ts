@@ -15,7 +15,7 @@ export const VideoNode = Node.create({
       },
     }
   },
-
+ 
   parseHTML() {
     return [
       {

@@ -1,0 +1,43 @@
+/* trackit frontend */
+:root {
+  --trackit-primary: #3b82f6;
+  --trackit-primary-hover: #2563eb;
+  --trackit-primary-soft: #eef4ff;
+  --trackit-bg: #f3f6fb;
+  --trackit-surface: #ffffff;
+  --trackit-text: #1e293b;
+  --trackit-muted: #64748b;
+  --trackit-border: #e2e8f0; /* slate-200 */
+  --trackit-danger: #ef4444;
+  --trackit-danger-soft: #fef2f2;
+  --trackit-success: #10b981;
+  --trackit-radius: 12px;
+  --trackit-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.trackit-page {
+  min-height: 100vh;
+  background: var(--trackit-bg);
+  color: var(--trackit-text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.trackit-card {
+  background: var(--trackit-surface);
+  border: 1px solid var(--trackit-border);
+  border-radius: var(--trackit-radius);
+  box-shadow: var(--trackit-shadow);
+}
+
+.trackit-input:focus {
+  border-color: var(--trackit-primary) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+}
+
+.trackit-link {
+  color: var(--trackit-primary);
+}
+
+.trackit-link:hover {
+  color: var(--trackit-primary-hover);
+}

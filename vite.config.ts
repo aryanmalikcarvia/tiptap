@@ -14,7 +14,7 @@ export default defineConfig({
     port: 5175,
     proxy: {
       "/api": {
-        target: "https://api.carvia-test.org/tackit-service",
+        target: "https://api.carvia-test.org/poc-office365-service",
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api/, ""),

@@ -1,4 +1,5 @@
 @import "./styles/_variables.scss";
 @import "./styles/_keyframe-animations.scss";
+@import "./trackit/styles/trackit-theme.css";
 
 @import "tailwindcss";

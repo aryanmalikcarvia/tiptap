@@ -16,6 +16,9 @@ import { Superscript } from "@tiptap/extension-superscript"
 import { Selection } from "@tiptap/extensions"
 
 
+import { CodeBlockShortcut } from "@/components/tiptap-extension/code-block-shortcut"
+import { MentionExtension } from "@/components/tiptap-extension/mention-extension"
+
 // --- UI Primitives ---
 import { Button } from "@/components/tiptap-ui-primitive/button"
 import { Spacer } from "@/components/tiptap-ui-primitive/spacer"
@@ -70,17 +73,34 @@ import { useIsBreakpoint } from "@/hooks/use-is-breakpoint"
 import { useWindowSize } from "@/hooks/use-window-size"
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 
-// --- Components ---
-import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
-
 // --- Lib ---
 import { handleMediaImageUpload, MAX_MEDIA_FILE_SIZE } from "@/lib/mediaUpload"
 
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
-import { content } from "@/components/tiptap-templates/simple/data/content"
-import type { Editor } from "@tiptap/react"
+import { content as defaultContent } from "@/components/tiptap-templates/simple/data/content"
+import type { Content, Editor } from "@tiptap/react"
+
+const EMPTY_DOC: Content = {
+  type: "doc",
+  content: [{ type: "paragraph" }],
+}
+
+export type SimpleEditorProps = {
+  /** TipTap JSON / HTML — create/edit ke liye */
+  initialContent?: Content
+  /** jab editor ready ho (getJSON / setContent ke liye) */
+  onEditorReady?: (editor: Editor) => void
+  /** form pages pe compact layout */
+  embedded?: boolean
+  /**
+   * Editing enable / disable isi prop se:
+   * - editable={false} → read-only (no typing, toolbar hidden)
+   * - editable={true}  → typing + toolbar on
+   */
+  editable?: boolean
+}
 
 const insertUploadedFile = (
   editor: Editor,
@@ -174,12 +194,6 @@ const MainToolbarContent = ({
       </ToolbarGroup>
 
       <Spacer />
-
-      {isMobile && <ToolbarSeparator />}
-
-      <ToolbarGroup>
-        <ThemeToggle />
-      </ToolbarGroup>
     </>
   )
 }
@@ -213,16 +227,31 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor() {
+export function SimpleEditor({
+  initialContent,
+  onEditorReady,
+  embedded = false,
+  editable = true,
+}: SimpleEditorProps = {}) {
   const isMobile = useIsBreakpoint()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">(
     "main"
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const onReadyRef = useRef(onEditorReady)
+  onReadyRef.current = onEditorReady
+
+  // Always light — no night / system dark theme on editor
+  useEffect(() => {
+    document.documentElement.classList.remove("dark")
+    document.documentElement.style.colorScheme = "light"
+  }, [])
 
   const editor = useEditor({
     immediatelyRender: false,
+    // Editing enable / disable: initial value; live updates via setEditable below
+    editable,
     editorProps: {
       attributes: {
         autocomplete: "off",
@@ -240,7 +269,11 @@ export function SimpleEditor() {
           enableClickSelection: true,
         },
       }),
+      CodeBlockShortcut,
+      MentionExtension,
       HorizontalRule,
+
+      
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -291,8 +324,26 @@ export function SimpleEditor() {
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
-    content,
+    content:
+      initialContent !== undefined
+        ? initialContent
+        : defaultContent || EMPTY_DOC,
+    onCreate: ({ editor: ed }) => {
+      onReadyRef.current?.(ed)
+    },
   })
+
+  useEffect(() => {
+    if (editor) onReadyRef.current?.(editor)
+  }, [editor])
+
+  // Editing enable / disable: useEditor sirf first render pe editable leta hai,
+  // isliye prop change hone par setEditable se sync karte hain
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable)
+    }
+  }, [editor, editable])
 
   const rect = useCursorVisibility({
     editor,
@@ -306,31 +357,36 @@ export function SimpleEditor() {
   }, [isMobile, mobileView])
 
   return (
-    <div className="simple-editor-wrapper">
+    <div
+      className={`simple-editor-wrapper${embedded ? " is-embedded" : ""}`}
+    >
       <EditorContext.Provider value={{ editor }}>
-        <Toolbar
-          ref={toolbarRef}
-          style={{
-            ...(isMobile
-              ? {
-                  bottom: `calc(100% - ${height - rect.y}px)`,
-                }
-              : {}),
-          }}
-        >
-          {mobileView === "main" ? (
-            <MainToolbarContent
-              onHighlighterClick={() => setMobileView("highlighter")}
-              onLinkClick={() => setMobileView("link")}
-              isMobile={isMobile}
-            />
-          ) : (
-            <MobileToolbarContent
-              type={mobileView === "highlighter" ? "highlighter" : "link"}
-              onBack={() => setMobileView("main")}
-            />
-          )}
-        </Toolbar>
+        {/* Editing enable / disable: toolbar sirf editable=true par dikhe */}
+        {editable && (
+          <Toolbar
+            ref={toolbarRef}
+            style={{
+              ...(isMobile
+                ? {
+                    bottom: `calc(100% - ${height - rect.y}px)`,
+                  }
+                : {}),
+            }}
+          >
+            {mobileView === "main" ? (
+              <MainToolbarContent
+                onHighlighterClick={() => setMobileView("highlighter")}
+                onLinkClick={() => setMobileView("link")}
+                isMobile={isMobile}
+              />
+            ) : (
+              <MobileToolbarContent
+                type={mobileView === "highlighter" ? "highlighter" : "link"}
+                onBack={() => setMobileView("main")}
+              />
+            )}
+          </Toolbar>
+        )}
 
         <EditorContent
           editor={editor}

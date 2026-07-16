@@ -1,11 +1,12 @@
-import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
+import { TrackitApp } from "@/trackit/TrackitApp"
+import { ToastProvider } from "@/components/ui/toast"
 
 function App() {
   return (
-    <div className="app-shell">
-      <SimpleEditor />
-    </div>
-  );
+    <ToastProvider>
+      <TrackitApp />
+    </ToastProvider>
+  )
 }
 
-export default App;
+export default App

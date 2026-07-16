@@ -1,57 +1,45 @@
 import {
   getApiErrorMessage,
-  getMedia,
-  mediaIdFromCid,
-  resolveMediaUrl,
   uploadMedia,
   type UploadMediaResponse,
-} from "@/api/mediaApi";
+} from "@/api/mediaApi"
 
+export const MAX_MEDIA_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
-export const MAX_MEDIA_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
-export type MediaKind = "image" | "video" | "pdf" | "other";
+export type MediaKind = "image" | "video" | "pdf" | "other"
 
 export type UploadedMediaItem = {
-  cid: string;
-  url: string;
-  kind: MediaKind;
-  name: string;
-};
+  cid: string
+  url: string
+  kind: MediaKind
+  name: string
+}
 
 export function getMediaKind(fileOrCid: File | string): MediaKind {
   const name =
-    typeof fileOrCid === "string" ? fileOrCid : fileOrCid.name || "";
-  const mime = typeof fileOrCid === "string" ? "" : fileOrCid.type || "";
+    typeof fileOrCid === "string" ? fileOrCid : fileOrCid.name || ""
+  const mime = typeof fileOrCid === "string" ? "" : fileOrCid.type || ""
 
   if (
     mime.startsWith("image/") ||
     /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)
   ) {
-    return "image";
+    return "image"
   }
-
   if (
     mime.startsWith("video/") ||
-    /\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i.test(name)
+    /\.(mp4|webm|mov|m4v|avi)$/i.test(name)
   ) {
-    return "video";
+    return "video"
   }
-
-  if (
-    mime === "application/pdf" ||
-    /\.pdf$/i.test(name) ||
-    mime.includes("pdf")
-  ) {
-    return "pdf";
+  if (mime === "application/pdf" || /\.pdf$/i.test(name)) {
+    return "pdf"
   }
-
-  return "other";
+  return "other"
 }
 
 /**
- * POST upload (+ optional GET).
- * Fail pe local object URL — editor paste/upload tootna nahi chahiye.
+ * POST upload. Fail pe local object URL — editor paste/upload tootna nahi chahiye.
  */
 export async function uploadAndResolveMedia(
   file: File,
@@ -59,87 +47,76 @@ export async function uploadAndResolveMedia(
   abortSignal?: AbortSignal
 ): Promise<UploadedMediaItem> {
   if (!file) {
-    throw new Error("No file provided");
+    throw new Error("No file provided")
   }
 
   if (file.size > MAX_MEDIA_FILE_SIZE) {
     throw new Error(
       `File size exceeds maximum allowed (${MAX_MEDIA_FILE_SIZE / (1024 * 1024)}MB)`
-    );
+    )
   }
 
   if (abortSignal?.aborted) {
-    throw new Error("Upload cancelled");
+    throw new Error("Upload cancelled")
   }
 
-  onProgress?.({ progress: 20 });
+  onProgress?.({ progress: 20 })
 
-  let uploaded: UploadMediaResponse;
+  let uploaded: UploadMediaResponse
   try {
-    uploaded = await uploadMedia(file);
+    uploaded = await uploadMedia(file)
   } catch (error) {
-    throw new Error(getApiErrorMessage(error));
+    throw new Error(getApiErrorMessage(error))
   }
 
   if (abortSignal?.aborted) {
-    throw new Error("Upload cancelled");
+    throw new Error("Upload cancelled")
   }
 
-  onProgress?.({ progress: 60 });
-
-  let url = uploaded.url;
-
-  try {
-    const media = await getMedia(mediaIdFromCid(uploaded.cid)); //get 
-    url = resolveMediaUrl(media, uploaded.url);
-  } catch (error) {
-    console.warn("GET media skipped/failed:", getApiErrorMessage(error));
-  }
-
-  onProgress?.({ progress: 100 });
+  onProgress?.({ progress: 100 })
 
   return {
     cid: uploaded.cid,
-    url,
+    url: uploaded.url,
     kind: getMediaKind(file),
     name: uploaded.cid,
-  };
+  }
 }
 
-/** TipTap image upload / paste — API pehle, fail pe local blob (pehle jaisa) */
+/** TipTap image upload / paste — API pehle, fail pe local blob */
 export async function handleMediaImageUpload(
   file: File,
   onProgress?: (event: { progress: number }) => void,
   abortSignal?: AbortSignal
 ): Promise<string> {
   try {
-    const item = await uploadAndResolveMedia(file, onProgress, abortSignal);
-    return item.url;
+    const item = await uploadAndResolveMedia(file, onProgress, abortSignal)
+    return item.url
   } catch (error) {
     console.warn(
       "Media API upload failed, using local preview:",
       getApiErrorMessage(error)
-    );
-    onProgress?.({ progress: 100 });
-    return URL.createObjectURL(file);
+    )
+    onProgress?.({ progress: 100 })
+    return URL.createObjectURL(file)
   }
 }
 
 export async function downloadMedia(url: string, filename: string) {
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Download failed");
+    const response = await fetch(url)
+    if (!response.ok) throw new Error("Download failed")
 
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(objectUrl);
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = objectUrl
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(objectUrl)
   } catch {
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(url, "_blank", "noopener,noreferrer")
   }
 }

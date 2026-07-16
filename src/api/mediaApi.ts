@@ -31,12 +31,11 @@ export function getApiErrorMessage(error: unknown): string {
   return "Upload failed. Try again.";
 }
 
-/** POST /media/upload — form-data key: file */
+/** POST /media/upload  */
 export async function uploadMedia(file: File): Promise<UploadMediaResponse> {
   const formData = new FormData();
   formData.append("file", file, file.name);
 
-  // Content-Type mat do — multipart boundary ke liye zaroori
   const { data } = await apiClient.post<UploadMediaResponse>(
     "/media/upload",
     formData
@@ -45,7 +44,6 @@ export async function uploadMedia(file: File): Promise<UploadMediaResponse> {
   return data;
 }
 
-/** GET /users/projects/medias/{mediaId} */
 // get media 
 export async function getMedia(mediaId: string): Promise<MediaResponse> {
   const { data } = await apiClient.get<MediaResponse>(
@@ -55,7 +53,7 @@ export async function getMedia(mediaId: string): Promise<MediaResponse> {
   return data;
 }
 
-/** DELETE /users/projects/medias/{mediaId} */
+/** DELETE  */
 export async function deleteMedia(mediaId: string): Promise<void> {
   await apiClient.delete(`/users/projects/medias/${mediaId}`);
 }

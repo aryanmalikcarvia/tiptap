@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const LIVE_API_ORIGIN = "https://api.carvia-test.org/tackit-service";
+const LIVE_API_ORIGIN =
+  "https://api.carvia-test.org/poc-office365-service";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.DEV ? "/api" : LIVE_API_ORIGIN,
