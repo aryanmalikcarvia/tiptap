@@ -121,6 +121,15 @@ body,
   color: #1e293b;
 }
 
+/* Comments: chhoti start height, content badhne pe khud expand */
+.simple-editor-wrapper.is-embedded.is-compact
+  .simple-editor-content
+  .tiptap.ProseMirror.simple-editor {
+  min-height: 4.5rem;
+  height: auto;
+  padding: 0.75rem 0.875rem 1rem;
+}
+
 .simple-editor-wrapper.is-embedded .tiptap-toolbar[data-variant="fixed"] {
   background: #f8fafc;
   border-bottom-color: #e2e8f0;

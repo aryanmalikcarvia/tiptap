@@ -1,6 +1,6 @@
 // trackit frontend
 import { useState } from "react"
-import { Pencil, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import type { Task } from "@/trackit/api/tasksApi"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +17,6 @@ import { DeleteTaskDialog } from "@/trackit/components/DeleteTaskDialog"
 type TasksTableProps = {
   tasks: Task[]
   onView: (task: Task) => void
-  onEdit: (task: Task) => void
   onDeleted: (id: number | string) => void
 }
 
@@ -26,7 +25,7 @@ function formatTaskId(id: number | string) {
   return `${id}`
 }
 
-export function TasksTable({ tasks, onView, onEdit, onDeleted }: TasksTableProps) {
+export function TasksTable({ tasks, onView, onDeleted }: TasksTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null)
 
   return (
@@ -75,19 +74,6 @@ export function TasksTable({ tasks, onView, onEdit, onDeleted }: TasksTableProps
                   </TableCell>
                   <TableCell className="w-[200px] text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="h-8 border-slate-200 bg-white text-slate-800 hover:bg-gray-200"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onEdit(task)
-                        }}
-                      >
-                        <Pencil className="size-3.5" />
-                        Edit
-                      </Button>
                       <Button
                         type="button"
                         variant="secondary"

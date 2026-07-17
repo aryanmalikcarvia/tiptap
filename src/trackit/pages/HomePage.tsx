@@ -3,33 +3,39 @@ import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Plus } from "lucide-react"
 import { getApiErrorMessage } from "@/api/mediaApi"
-import { getTasks, type Task } from "@/trackit/api/tasksApi"
+import {
+  getCachedTasks,
+  getTasks,
+  type Task,
+} from "@/trackit/api/tasksApi"
 import { Button } from "@/components/ui/button"
 import { TasksTable } from "@/trackit/components/TasksTable"
 import { TRACKIT_ROUTES } from "@/trackit/routes/paths"
 
 export function HomePage() {
   const navigate = useNavigate()
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
+  // Reload pe pehle cache dikhao — "Loading tasks…" sirf pehli baar (no cache)
+  const [tasks, setTasks] = useState<Task[]>(() => getCachedTasks() ?? [])
+  const [loading, setLoading] = useState(() => getCachedTasks() == null)
   const [error, setError] = useState<string | null>(null)
 
-  const loadTasks = useCallback(async () => {
-    setLoading(true)
+  const loadTasks = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true)
     setError(null)
     try {
       const data = await getTasks()
       setTasks(data)
     } catch (err) {
       setError(getApiErrorMessage(err))
-      setTasks([])
+      if (getCachedTasks() == null) setTasks([])
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void loadTasks()
+    // Cache mil gaya to silent refresh; warna full load
+    void loadTasks({ silent: getCachedTasks() != null })
   }, [loadTasks])
 
   return (
@@ -69,7 +75,6 @@ export function HomePage() {
         ) : (
           <TasksTable
             tasks={tasks}
-            onEdit={(task) => navigate(TRACKIT_ROUTES.edit(task.id))}
             onView={(task) => navigate(TRACKIT_ROUTES.details(task.id))}
             onDeleted={(id) => {
               setTasks((prev) => prev.filter((t) => t.id !== id))

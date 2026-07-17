@@ -100,6 +100,8 @@ export type SimpleEditorProps = {
    * - editable={true}  → typing + toolbar on
    */
   editable?: boolean
+  /** comments jaisi chhoti boxes — chhoti min-height, content ke saath auto-grow */
+  compact?: boolean
 }
 
 const insertUploadedFile = (
@@ -232,6 +234,7 @@ export function SimpleEditor({
   onEditorReady,
   embedded = false,
   editable = true,
+  compact = false,
 }: SimpleEditorProps = {}) {
   const isMobile = useIsBreakpoint()
   const { height } = useWindowSize()
@@ -358,7 +361,7 @@ export function SimpleEditor({
 
   return (
     <div
-      className={`simple-editor-wrapper${embedded ? " is-embedded" : ""}`}
+      className={`simple-editor-wrapper${embedded ? " is-embedded" : ""}${compact ? " is-compact" : ""}`}
     >
       <EditorContext.Provider value={{ editor }}>
         {/* Editing enable / disable: toolbar sirf editable=true par dikhe */}

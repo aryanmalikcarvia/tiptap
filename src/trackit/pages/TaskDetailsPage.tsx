@@ -1,53 +1,36 @@
 // trackit frontend
 import { useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Pencil } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import type { Content, Editor } from "@tiptap/react"
-import { getTask, updateTask } from "@/trackit/api/tasksApi"
+import { getCachedTask, getTask, updateTask } from "@/trackit/api/tasksApi"
 import { getApiErrorMessage } from "@/api/mediaApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { isEditorContentEmpty } from "@/trackit/utils/isEditorEmpty"
+import { toEditorContent } from "@/trackit/utils/toEditorContent"
 import { TRACKIT_ROUTES } from "@/trackit/routes/paths"
+import { TaskCommentsSection } from "@/trackit/components/TaskCommentsSection"
 
-const EMPTY_DOC: Content = {
-  type: "doc",
-  content: [{ type: "paragraph" }],
-}
-
-function toEditorContent(content: unknown): Content {
-  if (content == null) return EMPTY_DOC
-  if (typeof content === "string") {
-    try {
-      return JSON.parse(content) as Content
-    } catch {
-      return {
-        type: "doc",
-        content: [
-          { type: "paragraph", content: [{ type: "text", text: content }] },
-        ],
-      }
-    }
-  }
-  if (typeof content === "object") return content as Content
-  return EMPTY_DOC
-}
-
-export function EditTaskPage() {
+export function TaskDetailsPage() {
   const { taskId = "" } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
   const editorRef = useRef<Editor | null>(null)
 
-  // Editing enable / disable: pehle read-only content dikhe; Edit click par true
+  // Editing enable / disable: page khulte hi band; title/description pe click se on
   const [isEditing, setIsEditing] = useState(false)
 
-  const [title, setTitle] = useState("")
-  const [savedTitle, setSavedTitle] = useState("")
-  const [initialContent, setInitialContent] = useState<Content | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Reload pe pehle cache se hydrate — "Loading…" sirf pehli baar
+  const cached = getCachedTask(taskId)
+  const [title, setTitle] = useState(() => cached?.title ?? "")
+  const [savedTitle, setSavedTitle] = useState(() => cached?.title ?? "")
+  const [savedContent, setSavedContent] = useState<Content | null>(() =>
+    cached ? toEditorContent(cached.content) : null
+  )
+  const [loading, setLoading] = useState(() => cached == null)
   const [saving, setSaving] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
@@ -55,20 +38,35 @@ export function EditTaskPage() {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
+    const fromCache = getCachedTask(taskId)
+
+    if (fromCache) {
+      setTitle(fromCache.title ?? "")
+      setSavedTitle(fromCache.title ?? "")
+      setSavedContent(toEditorContent(fromCache.content))
+      setLoading(false)
+    } else {
       setLoading(true)
-      setApiError(null)
-      setIsEditing(false)
+      setSavedContent(null)
+      setTitle("")
+      setSavedTitle("")
+    }
+
+    setApiError(null)
+    setIsEditing(false)
+
+    ;(async () => {
       try {
         const task = await getTask(taskId)
         if (cancelled) return
         const nextTitle = task.title ?? ""
-        const nextContent = toEditorContent(task.content)
         setTitle(nextTitle)
         setSavedTitle(nextTitle)
-        setInitialContent(nextContent)
+        setSavedContent(toEditorContent(task.content))
       } catch (err) {
-        if (!cancelled) setApiError(getApiErrorMessage(err))
+        if (!cancelled && getCachedTask(taskId) == null) {
+          setApiError(getApiErrorMessage(err))
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -78,14 +76,25 @@ export function EditTaskPage() {
     }
   }, [taskId])
 
+  // Silent refresh ke baad editor content sync (sirf read-only mode me)
+  useEffect(() => {
+    if (isEditing || !savedContent || !editorRef.current) return
+    editorRef.current.commands.setContent(savedContent)
+  }, [savedContent, isEditing])
+
+  // Editing enable / disable: kisi bhi field pe click → editing on
+  const enableEditing = () => {
+    if (!isEditing && !loading) setIsEditing(true)
+  }
+
   // Editing enable / disable: Cancel → changes discard, wapas read-only
-  const handleCancelEdit = () => {
+  const handleCancel = () => {
     setTitle(savedTitle)
     setTitleError(null)
     setDescriptionError(null)
     setApiError(null)
-    if (initialContent && editorRef.current) {
-      editorRef.current.commands.setContent(initialContent)
+    if (savedContent && editorRef.current) {
+      editorRef.current.commands.setContent(savedContent)
     }
     setIsEditing(false)
   }
@@ -120,7 +129,7 @@ export function EditTaskPage() {
         content,
       })
       setSavedTitle(trimmed)
-      setInitialContent(content as Content)
+      setSavedContent(content as Content)
       // Editing enable / disable: save ke baad wapas read-only
       setIsEditing(false)
       toast("✅ Task updated successfully")
@@ -146,54 +155,17 @@ export function EditTaskPage() {
         </Button>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-              {isEditing ? "Edit Task" : "Task Details"}
-            </h1>
+          <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-800">
+            {isEditing ? "Edit Task" : "Task Details"}
+          </h1>
 
-            {/* Editing enable / disable: Edit → toolbar + typing; Cancel/Save → read-only */}
-            {!loading && initialContent && isEditing && (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="border-slate-200 bg-white text-slate-800 hover:bg-gray-200"
-                  disabled={saving}
-                  onClick={handleCancelEdit}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="bg-blue-500 text-white hover:bg-blue-600"
-                  disabled={saving}
-                  onClick={handleSave}
-                >
-                  {saving ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            )}
-
-            {!loading && initialContent && !isEditing && (
-              <Button
-                type="button"
-                className="bg-blue-500 text-white hover:bg-blue-600"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="mr-2 size-4" />
-                Edit
-              </Button>
-            )}
-          </div>
-
-          {apiError ? (
+          {apiError && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {apiError}
             </div>
-          ) : null}
+          )}
 
-          {loading || !initialContent ? (
+          {loading || !savedContent ? (
             <p className="py-10 text-center text-sm text-slate-500">
               Loading task…
             </p>
@@ -201,56 +173,90 @@ export function EditTaskPage() {
             <>
               <div className="mb-5 space-y-2">
                 <label
-                  htmlFor="edit-task-title"
+                  htmlFor="task-details-title"
                   className="block text-sm font-semibold text-slate-800"
                 >
-                  Title
-                  {isEditing ? (
-                    <span className="text-red-500"> *</span>
-                  ) : null}
+                  Title{isEditing && <span className="text-red-500"> *</span>}
                 </label>
+                {/* Editing enable / disable: title pe click → editing on */}
                 <Input
-                  id="edit-task-title"
-                  className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:ring-blue-100 disabled:bg-slate-50 disabled:opacity-100"
+                  id="task-details-title"
+                  className={
+                    isEditing
+                      ? "border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:ring-blue-100"
+                      : "cursor-pointer border-slate-200 bg-slate-50 text-slate-800"
+                  }
                   placeholder="Enter task title"
                   value={title}
-                  disabled={!isEditing || saving}
+                  readOnly={!isEditing}
+                  disabled={saving}
+                  onClick={enableEditing}
                   onChange={(e) => {
                     setTitle(e.target.value)
                     if (titleError) setTitleError(null)
                   }}
                 />
-                {titleError ? (
+                {titleError && (
                   <p className="text-sm text-red-500">{titleError}</p>
-                ) : null}
+                )}
               </div>
 
               <div className="mb-2 space-y-2">
                 <label className="block text-sm font-semibold text-slate-800">
                   Description
-                  {isEditing ? (
-                    <span className="text-red-500"> *</span>
-                  ) : null}
+                  {isEditing && <span className="text-red-500"> *</span>}
                 </label>
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                  {/* Editing enable / disable: editable={isEditing} → toolbar + typing sync */}
+                {/* Editing enable / disable: description pe click → editing on */}
+                <div
+                  className={`overflow-hidden rounded-xl border border-slate-200 bg-white${
+                    isEditing ? "" : " cursor-pointer"
+                  }`}
+                  onClick={enableEditing}
+                >
                   <SimpleEditor
                     key={String(taskId)}
                     embedded
                     editable={isEditing}
-                    initialContent={initialContent}
+                    initialContent={savedContent}
                     onEditorReady={(editor) => {
                       editorRef.current = editor
                     }}
                   />
                 </div>
-                {descriptionError ? (
+                {descriptionError && (
                   <p className="text-sm text-red-500">{descriptionError}</p>
-                ) : null}
+                )}
               </div>
+
+              {/* Editing enable / disable: Save/Cancel sirf editing me, description ke niche */}
+              {isEditing && (
+                <div className="mt-6 flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="border-slate-200 bg-white text-slate-800 hover:bg-gray-200"
+                    disabled={saving}
+                    onClick={handleCancel}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-blue-500 text-white hover:bg-blue-600"
+                    disabled={saving}
+                    onClick={() => {
+                      void handleSave()
+                    }}
+                  >
+                    {saving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>
+
+        {!loading && savedContent && <TaskCommentsSection taskId={taskId} />}
       </div>
     </div>
   )
