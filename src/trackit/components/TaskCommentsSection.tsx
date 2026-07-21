@@ -4,6 +4,7 @@ import type { Content, Editor } from "@tiptap/react"
 import { Send, Trash2 } from "lucide-react"
 import {
   createComment,
+  getCachedComments,
   getComments,
   updateComment,
   type TaskComment,
@@ -14,6 +15,7 @@ import { useToast } from "@/components/ui/toast"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { isEditorContentEmpty } from "@/trackit/utils/isEditorEmpty"
 import { toEditorContent } from "@/trackit/utils/toEditorContent"
+import { renderTiptapContent } from "@/trackit/utils/renderTiptapContent"
 import { DeleteCommentDialog } from "@/trackit/components/DeleteCommentDialog"
 
 const EMPTY_DOC: Content = {
@@ -46,6 +48,9 @@ function wasCommentEdited(comment: TaskComment) {
 type CommentItemProps = {
   taskId: string | number
   comment: TaskComment
+  isEditing: boolean
+  onStartEditing: (commentId: number | string) => void
+  onStopEditing: () => void
   onUpdated: (comment: TaskComment) => void
   onRequestDelete: (comment: TaskComment) => void
 }
@@ -53,13 +58,13 @@ type CommentItemProps = {
 function CommentItem({
   taskId,
   comment,
+  isEditing,
+  onStartEditing,
+  onStopEditing,
   onUpdated,
   onRequestDelete,
 }: CommentItemProps) {
   const editorRef = useRef<Editor | null>(null)
-
-  // Editing enable / disable: pehle read-only; content pe click se on
-  const [isEditing, setIsEditing] = useState(false)
   const [savedContent, setSavedContent] = useState<Content>(() =>
     toEditorContent(comment.content)
   )
@@ -68,18 +73,11 @@ function CommentItem({
 
   useEffect(() => {
     setSavedContent(toEditorContent(comment.content))
-    setIsEditing(false)
     setError(null)
   }, [comment.id, comment.content])
 
-  useEffect(() => {
-    if (isEditing || !editorRef.current) return
-    editorRef.current.commands.setContent(savedContent)
-  }, [savedContent, isEditing])
-  
-
   const enableEditing = () => {
-    if (!isEditing && !saving) setIsEditing(true)
+    if (!isEditing && !saving) onStartEditing(comment.id)
   }
 
   const handleCancel = () => {
@@ -87,7 +85,7 @@ function CommentItem({
     if (editorRef.current) {
       editorRef.current.commands.setContent(savedContent)
     }
-    setIsEditing(false)
+    onStopEditing()
   }
 
   const handleSave = async () => {
@@ -104,7 +102,7 @@ function CommentItem({
       const updated = await updateComment(taskId, comment.id, { content })
       setSavedContent(content as Content)
       // Editing enable / disable: save ke baad wapas read-only
-      setIsEditing(false)
+      onStopEditing()
       onUpdated(updated)
     } catch (err) {
       setError(getApiErrorMessage(err))
@@ -114,7 +112,13 @@ function CommentItem({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div
+      className={
+        isEditing
+          ? "my-3 rounded-xl border border-slate-200 bg-white p-4"
+          : "py-3"
+      }
+    >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium text-slate-500">
           {wasCommentEdited(comment) ? "Edited " : ""}
@@ -123,9 +127,6 @@ function CommentItem({
           )}
         </p>
         <div className="flex items-center gap-2">
-          {!isEditing && (
-            <p className="text-xs text-slate-400"></p>
-          )}
           <Button
             type="button"
             variant="secondary"
@@ -143,24 +144,36 @@ function CommentItem({
         </div>
       </div>
 
-      {/* Editing enable / disable: comment pe click - typing */}
-      <div
-        className={`overflow-hidden rounded-xl border border-slate-200 bg-white${
-          isEditing ? "" : " cursor-pointer"
-        }`}
-        onClick={enableEditing}
-      >
-        <SimpleEditor
-          key={`comment-${comment.id}`}
-          embedded
-          compact
-          editable={isEditing}
-          initialContent={savedContent}
-          onEditorReady={(editor) => {
-            editorRef.current = editor
+      {/* Read-only: flat text lines; edit mode: editor box */}
+      {isEditing ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <SimpleEditor
+            key={`comment-edit-${comment.id}`}
+            embedded
+            compact
+            editable
+            initialContent={savedContent}
+            onEditorReady={(editor) => {
+              editorRef.current = editor
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          className="w-full cursor-pointer rounded-md px-2 py-1 text-left transition-colors hover:bg-slate-50 hover:text-slate-900"
+          onClick={enableEditing}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              enableEditing()
+            }
           }}
-        />
-      </div>
+        >
+          {renderTiptapContent(savedContent)}
+        </div>
+      )}
 
       {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
@@ -199,28 +212,42 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   const { toast } = useToast()
   const composerRef = useRef<Editor | null>(null)
   const [composerKey, setComposerKey] = useState(0)
-  const [comments, setComments] = useState<TaskComment[]>([])
-  const [loading, setLoading] = useState(true)
+  const [comments, setComments] = useState<TaskComment[]>(
+    () => getCachedComments(taskId) ?? []
+  )
+  const [editingCommentId, setEditingCommentId] = useState<number | string | null>(
+    null
+  )
+  const [loading, setLoading] = useState(() => getCachedComments(taskId) == null)
   const [sending, setSending] = useState(false)
   const [composerError, setComposerError] = useState<string | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<TaskComment | null>(null)
 
   const loadComments = async () => {
-    setLoading(true)
+    const cached = getCachedComments(taskId)
+    if (cached) {
+      setComments(cached)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     setListError(null)
     try {
       const data = await getComments(taskId)
       setComments(data)
     } catch (err) {
-      setListError(getApiErrorMessage(err))
-      setComments([])
+      if (cached == null) {
+        setListError(getApiErrorMessage(err))
+        setComments([])
+      }
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    setEditingCommentId(null)
     void loadComments()
   }, [taskId])
 
@@ -295,7 +322,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
           All comments
         </h3>
 
-        {listError && (
+        {listError && comments.length === 0 && (
           <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {listError}
           </div>
@@ -305,17 +332,20 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
           <p className="py-6 text-center text-sm text-slate-500">
             Loading comments…
           </p>
-        ) : comments.length === 0 ? (
+        ) : comments.length === 0 && !listError ? (
           <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
             No comments yet. Be the first to comment.
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-slate-100">
             {comments.map((comment) => (
               <CommentItem
                 key={String(comment.id)}
                 taskId={taskId}
                 comment={comment}
+                isEditing={String(editingCommentId) === String(comment.id)}
+                onStartEditing={setEditingCommentId}
+                onStopEditing={() => setEditingCommentId(null)}
                 onUpdated={(updated) => {
                   setComments((prev) =>
                     prev.map((c) =>

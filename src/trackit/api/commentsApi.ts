@@ -1,5 +1,11 @@
 // trackit frontend
 import { apiClient } from "@/axios/axiosConfig"
+import {
+  getCachedComments,
+  removeCachedComment,
+  setCachedComments,
+  upsertCachedComment,
+} from "@/trackit/api/commentsCache"
 
 export type CommentContent =
   | Record<string, unknown>
@@ -48,7 +54,9 @@ export async function getComments(
   taskId: number | string
 ): Promise<TaskComment[]> {
   const { data } = await apiClient.get<unknown>(`/tasks/${taskId}/comments`)
-  return normalizeCommentsResponse(data)
+  const comments = normalizeCommentsResponse(data)
+  setCachedComments(taskId, comments)
+  return comments
 }
 
 export async function createComment(
@@ -59,6 +67,7 @@ export async function createComment(
     `/tasks/${taskId}/comments`,
     payload
   )
+  upsertCachedComment(taskId, data)
   return data
 }
 
@@ -71,6 +80,7 @@ export async function updateComment(
     `/tasks/${taskId}/comments/${commentId}`,
     payload
   )
+  upsertCachedComment(taskId, data)
   return data
 }
 
@@ -79,4 +89,7 @@ export async function deleteComment(
   commentId: number | string
 ): Promise<void> {
   await apiClient.delete(`/tasks/${taskId}/comments/${commentId}`)
+  removeCachedComment(taskId, commentId)
 }
+
+export { getCachedComments }

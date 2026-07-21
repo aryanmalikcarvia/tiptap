@@ -178,19 +178,18 @@ export function TaskDetailsPage() {
                 >
                   Title{isEditing && <span className="text-red-500"> *</span>}
                 </label>
-                {/* Editing enable / disable: title pe click → editing on */}
+                {/* Title sirf tab editable hai jab description se editing already on ho */}
                 <Input
                   id="task-details-title"
                   className={
                     isEditing
                       ? "border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:ring-blue-100"
-                      : "cursor-pointer border-slate-200 bg-slate-50 text-slate-800"
+                      : "border-slate-200 bg-slate-50 text-slate-800"
                   }
                   placeholder="Enter task title"
                   value={title}
                   readOnly={!isEditing}
                   disabled={saving}
-                  onClick={enableEditing}
                   onChange={(e) => {
                     setTitle(e.target.value)
                     if (titleError) setTitleError(null)

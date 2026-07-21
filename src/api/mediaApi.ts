@@ -17,12 +17,23 @@ export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const data = error.response?.data;
-    const detail =
+    const rawDetail =
       typeof data === "string"
         ? data
         : data && typeof data === "object" && "message" in data
           ? String((data as { message: unknown }).message)
           : error.message;
+
+    const detail = rawDetail.trim();
+    const looksLikeHtml =
+      detail.startsWith("<!DOCTYPE") ||
+      detail.startsWith("<html") ||
+      detail.includes("<title>") ||
+      detail.includes("<body>");
+
+    if (status === 502 || status === 503 || looksLikeHtml) {
+      return "Server temporarily unavailable. Please try again.";
+    }
 
     return status ? `API ${status}: ${detail}` : detail;
   }

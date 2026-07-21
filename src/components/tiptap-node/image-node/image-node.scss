@@ -1,12 +1,32 @@
 .tiptap.ProseMirror {
   img {
-    max-width: 100%;
-    height: auto;
     display: block;
+        max-width: 200px;
+        width: auto;
+        height: auto;
+        max-height: 500px;
+        
+            margin: 1rem auto;
+            border-radius: 8px;
+        
+            object-fit: contain;
+  }
+
+  p{
+    display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
   }
 
   p > img {
-    display: inline-block;
+    
+
+        display: block;
+            max-width: 220px;
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        
   }
 
   > img:not([data-type="emoji"] img) {

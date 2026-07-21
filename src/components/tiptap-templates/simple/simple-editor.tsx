@@ -88,19 +88,11 @@ const EMPTY_DOC: Content = {
 }
 
 export type SimpleEditorProps = {
-  /** TipTap JSON / HTML — create/edit ke liye */
   initialContent?: Content
-  /** jab editor ready ho (getJSON / setContent ke liye) */
   onEditorReady?: (editor: Editor) => void
-  /** form pages pe compact layout */
   embedded?: boolean
-  /**
-   * Editing enable / disable isi prop se:
-   * - editable={false} → read-only (no typing, toolbar hidden)
-   * - editable={true}  → typing + toolbar on
-   */
+ 
   editable?: boolean
-  /** comments jaisi chhoti boxes — chhoti min-height, content ke saath auto-grow */
   compact?: boolean
 }
 
@@ -123,7 +115,6 @@ const insertUploadedFile = (
     node = { type: "image", attrs: { src } }
   }
 
-  // Always insert at saved cursor/drop position (async upload se selection lost ho sakti hai)
   editor.chain().focus().insertContentAt(pos, node).run()
 }
 
@@ -245,7 +236,6 @@ export function SimpleEditor({
   const onReadyRef = useRef(onEditorReady)
   onReadyRef.current = onEditorReady
 
-  // Always light — no night / system dark theme on editor
   useEffect(() => {
     document.documentElement.classList.remove("dark")
     document.documentElement.style.colorScheme = "light"
@@ -253,7 +243,6 @@ export function SimpleEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
-    // Editing enable / disable: initial value; live updates via setEditable below
     editable,
     editorProps: {
       attributes: {
@@ -340,8 +329,6 @@ export function SimpleEditor({
     if (editor) onReadyRef.current?.(editor)
   }, [editor])
 
-  // Editing enable / disable: useEditor sirf first render pe editable leta hai,
-  // isliye prop change hone par setEditable se sync karte hain
   useEffect(() => {
     if (editor) {
       editor.setEditable(editable)
