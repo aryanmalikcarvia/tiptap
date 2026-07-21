@@ -14,7 +14,6 @@ import { TRACKIT_ROUTES } from "@/trackit/routes/paths"
 
 export function HomePage() {
   const navigate = useNavigate()
-  // Reload pe pehle cache dikhao — "Loading tasks…" sirf pehli baar (no cache)
   const [tasks, setTasks] = useState<Task[]>(() => getCachedTasks() ?? [])
   const [loading, setLoading] = useState(() => getCachedTasks() == null)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +33,6 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    // Cache mil gaya to silent refresh; warna full load
     void loadTasks({ silent: getCachedTasks() != null })
   }, [loadTasks])
 

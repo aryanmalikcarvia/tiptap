@@ -24,8 +24,7 @@ const EMPTY_DOC: Content = {
 function formatCommentTime(value?: string) {
   if (!value) return ""
 
-  // Backend UTC timestamp me timezone suffix nahi bhej raha.
-  // `Z` add karke UTC parse karo, phir user ko India time me dikhao.
+
   const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
   const date = new Date(hasTimezone ? value : `${value}Z`)
   if (Number.isNaN(date.getTime())) return value
@@ -58,6 +57,7 @@ function CommentItem({
   onRequestDelete,
 }: CommentItemProps) {
   const editorRef = useRef<Editor | null>(null)
+
   // Editing enable / disable: pehle read-only; content pe click se on
   const [isEditing, setIsEditing] = useState(false)
   const [savedContent, setSavedContent] = useState<Content>(() =>
@@ -143,7 +143,7 @@ function CommentItem({
         </div>
       </div>
 
-      {/* Editing enable / disable: comment pe click → toolbar + typing */}
+      {/* Editing enable / disable: comment pe click - typing */}
       <div
         className={`overflow-hidden rounded-xl border border-slate-200 bg-white${
           isEditing ? "" : " cursor-pointer"
@@ -164,7 +164,6 @@ function CommentItem({
 
       {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
-      {/* Editing enable / disable: Save/Cancel sirf editing me */}
       {isEditing && (
         <div className="mt-3 flex items-center gap-3">
           <Button

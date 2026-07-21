@@ -228,7 +228,6 @@ export function TaskDetailsPage() {
                 )}
               </div>
 
-              {/* Editing enable / disable: Save/Cancel sirf editing me, description ke niche */}
               {isEditing && (
                 <div className="mt-6 flex items-center gap-3">
                   <Button
