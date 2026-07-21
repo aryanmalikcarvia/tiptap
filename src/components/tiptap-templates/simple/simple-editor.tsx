@@ -13,7 +13,7 @@ import { Typography } from "@tiptap/extension-typography"
 import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
-import { Selection, Placeholder } from "@tiptap/extensions"
+import { Selection, Placeholder, Focus } from "@tiptap/extensions"
 
 
 import { CodeBlockShortcut } from "@/components/tiptap-extension/code-block-shortcut"
@@ -295,9 +295,7 @@ export function SimpleEditor({
 
           requestAnimationFrame(() => {
             if (!view.dom.isConnected) return
-            if (ed.isEmpty) {
-              ed.commands.focus("start")
-            } else if (!view.hasFocus()) {
+            if (!view.hasFocus()) {
               view.focus()
             }
             view.dom.classList.add("ProseMirror-focused")
@@ -306,10 +304,6 @@ export function SimpleEditor({
         },
         focus: (view) => {
           view.dom.classList.add("ProseMirror-focused")
-          const ed = editorInstanceRef.current
-          if (ed && !ed.isDestroyed && ed.isEmpty) {
-            requestAnimationFrame(() => ed.commands.focus("start"))
-          }
           return false
         },
         blur: (view) => {
@@ -373,6 +367,10 @@ export function SimpleEditor({
       Superscript,
       Subscript,
       Selection,
+      Focus.configure({
+        className: "has-focus",
+        mode: "deepest",
+      }),
       Placeholder.configure({
         placeholder: placeholder ?? (compact ? "Write here…" : "Write something…"),
         emptyNodeClass: "is-empty",
@@ -419,15 +417,19 @@ export function SimpleEditor({
     if (!editor || !editable) return
 
     const dom = editor.view.dom
-    const syncEmptyCaret = () => {
+    const syncFocused = () => {
       dom.classList.add("ProseMirror-focused")
-      if (editor.isEmpty) {
-        editor.commands.focus("start")
-      }
     }
 
-    dom.addEventListener("focus", syncEmptyCaret)
-    return () => dom.removeEventListener("focus", syncEmptyCaret)
+    dom.addEventListener("focus", syncFocused)
+    editor.on("selectionUpdate", syncFocused)
+    editor.on("focus", syncFocused)
+
+    return () => {
+      dom.removeEventListener("focus", syncFocused)
+      editor.off("selectionUpdate", syncFocused)
+      editor.off("focus", syncFocused)
+    }
   }, [editor, editable])
 
   const rect = useCursorVisibility({

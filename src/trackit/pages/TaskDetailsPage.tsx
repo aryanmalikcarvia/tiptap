@@ -19,6 +19,8 @@ export function TaskDetailsPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const editorRef = useRef<Editor | null>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const pendingTitleFocusRef = useRef(false)
 
   // Editing enable / disable: page khulte hi band; title/description pe click se on
   const [isEditing, setIsEditing] = useState(false)
@@ -86,10 +88,25 @@ export function TaskDetailsPage() {
     editorRef.current.commands.setContent(savedContent)
   }, [savedContent, isEditing])
 
-  // Editing enable / disable: kisi bhi field pe click → editing on
+  // Editing enable / disable: title ya description pe click → editing on
   const enableEditing = () => {
     if (!isEditing && !loading) setIsEditing(true)
   }
+
+  const enableEditingWithTitleFocus = () => {
+    if (loading) return
+    if (!isEditing) {
+      pendingTitleFocusRef.current = true
+      setIsEditing(true)
+    }
+  }
+
+  useEffect(() => {
+    if (isEditing && pendingTitleFocusRef.current) {
+      pendingTitleFocusRef.current = false
+      titleInputRef.current?.focus()
+    }
+  }, [isEditing])
 
   // Editing enable / disable: Cancel → changes discard, wapas read-only
   const handleCancel = () => {
@@ -182,18 +199,26 @@ export function TaskDetailsPage() {
                 >
                   Title{isEditing && <span className="text-red-500"> *</span>}
                 </label>
-                {/* Title sirf tab editable hai jab description se editing already on ho */}
+                {/* Title ya description pe click → editing on */}
                 <Input
+                  ref={titleInputRef}
                   id="task-details-title"
                   className={
                     isEditing
                       ? "border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:ring-blue-100"
-                      : "border-slate-200 bg-slate-50 text-slate-800"
+                      : "cursor-pointer border-slate-200 bg-slate-50 text-slate-800"
                   }
                   placeholder="Enter task title"
                   value={title}
                   readOnly={!isEditing}
                   disabled={saving}
+                  onMouseDown={(e) => {
+                    if (!isEditing && !loading) {
+                      e.preventDefault()
+                      enableEditingWithTitleFocus()
+                    }
+                  }}
+                  onFocus={() => enableEditing()}
                   onChange={(e) => {
                     setTitle(e.target.value)
                     if (titleError) setTitleError(null)
@@ -222,10 +247,6 @@ export function TaskDetailsPage() {
                     editable={isEditing}
                     autoFocus={isEditing}
                     placeholder="Click to edit description…"
-                    submitOnEnter={isEditing}
-                    onEnterSubmit={() => {
-                      void handleSave()
-                    }}
                     initialContent={savedContent}
                     onEditorReady={(editor) => {
                       editorRef.current = editor

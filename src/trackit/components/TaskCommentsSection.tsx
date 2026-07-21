@@ -155,10 +155,6 @@ function CommentItem({
             editable
             autoFocus
             placeholder="Edit comment…"
-            submitOnEnter
-            onEnterSubmit={() => {
-              void handleSave()
-            }}
             initialContent={savedContent}
             onEditorReady={(editor) => {
               editorRef.current = editor
@@ -287,8 +283,8 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
         Comments
       </h2>
       <p className="mb-5 text-sm text-slate-500">
-        Write a comment below and click Send (or press Enter). Shift+Enter for a
-        new line. Click any comment to edit it.
+        Write a comment below and click Send. Press Enter for a new line. Click
+        any comment to edit it.
       </p>
 
       <div className="mb-6 space-y-2">
@@ -302,10 +298,6 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
             compact
             editable
             placeholder="Write a comment…"
-            submitOnEnter
-            onEnterSubmit={() => {
-              void handleSend()
-            }}
             initialContent={EMPTY_DOC}
             onEditorReady={(editor) => {
               composerRef.current = editor

@@ -199,14 +199,14 @@
   opacity: 0;
 }
 
-/* Empty + focused: blink caret jab tak type na ho */
+/* Empty + focused: blink caret on active line only */
 .tiptap.ProseMirror.ProseMirror-focused
-  p.is-empty[data-placeholder]:has(> .ProseMirror-trailingBreak:only-child) {
+  p.has-focus.is-empty:has(> .ProseMirror-trailingBreak:only-child) {
   caret-color: transparent;
 }
 
 .tiptap.ProseMirror.ProseMirror-focused
-  p.is-empty[data-placeholder]:has(> .ProseMirror-trailingBreak:only-child)::after {
+  p.has-focus.is-empty:has(> .ProseMirror-trailingBreak:only-child)::after {
   content: "";
   display: inline-block;
   width: 1.5px;

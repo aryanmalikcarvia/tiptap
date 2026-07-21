@@ -121,10 +121,6 @@ export function CreateTaskPage() {
                 embedded
                 editable
                 placeholder="Enter task description…"
-                submitOnEnter
-                onEnterSubmit={() => {
-                  void handleCreate()
-                }}
                 initialContent={EMPTY_DOC}
                 onEditorReady={(editor) => {
                   editorRef.current = editor
