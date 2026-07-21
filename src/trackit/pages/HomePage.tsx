@@ -75,7 +75,7 @@ export function HomePage() {
         ) : (
           <TasksTable
             tasks={tasks}
-            onView={(task) => navigate(TRACKIT_ROUTES.details(task.id))}
+            onView={(task) => navigate(TRACKIT_ROUTES.detailsPath(task.id))}
             onDeleted={(id) => {
               setTasks((prev) => prev.filter((t) => t.id !== id))
             }}

@@ -10,7 +10,7 @@ export function TrackitRoutes() {
     <Routes>
       <Route path={TRACKIT_ROUTES.home} element={<HomePage />} />
       <Route path={TRACKIT_ROUTES.create} element={<CreateTaskPage />} />
-      <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
+      <Route path={TRACKIT_ROUTES.details} element={<TaskDetailsPage />} />
       <Route path="*" element={<Navigate to={TRACKIT_ROUTES.home} replace />} />
     </Routes>
   )
