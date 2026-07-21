@@ -116,9 +116,15 @@ export function CreateTaskPage() {
             <label className="block text-sm font-semibold text-slate-800">
               Description <span className="text-red-500">*</span>
             </label>
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white cursor-text">
               <SimpleEditor
                 embedded
+                editable
+                placeholder="Enter task description…"
+                submitOnEnter
+                onEnterSubmit={() => {
+                  void handleCreate()
+                }}
                 initialContent={EMPTY_DOC}
                 onEditorReady={(editor) => {
                   editorRef.current = editor

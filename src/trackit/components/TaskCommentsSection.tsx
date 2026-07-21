@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { Content, Editor } from "@tiptap/react"
 import { Send, Trash2 } from "lucide-react"
+import { sortCommentsNewestFirst } from "@/trackit/utils/sortComments"
 import {
   createComment,
   getCachedComments,
@@ -152,6 +153,12 @@ function CommentItem({
             embedded
             compact
             editable
+            autoFocus
+            placeholder="Edit comment…"
+            submitOnEnter
+            onEnterSubmit={() => {
+              void handleSave()
+            }}
             initialContent={savedContent}
             onEditorReady={(editor) => {
               editorRef.current = editor
@@ -162,7 +169,7 @@ function CommentItem({
         <div
           role="button"
           tabIndex={0}
-          className="w-full cursor-pointer rounded-md px-2 py-1 text-left transition-colors hover:bg-slate-50 hover:text-slate-900"
+          className="w-full cursor-text rounded-md px-2 py-1 text-left transition-colors hover:bg-slate-50 hover:text-slate-900"
           onClick={enableEditing}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -212,8 +219,8 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   const { toast } = useToast()
   const composerRef = useRef<Editor | null>(null)
   const [composerKey, setComposerKey] = useState(0)
-  const [comments, setComments] = useState<TaskComment[]>(
-    () => getCachedComments(taskId) ?? []
+  const [comments, setComments] = useState<TaskComment[]>(() =>
+    sortCommentsNewestFirst(getCachedComments(taskId) ?? [])
   )
   const [editingCommentId, setEditingCommentId] = useState<number | string | null>(
     null
@@ -227,7 +234,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   const loadComments = async () => {
     const cached = getCachedComments(taskId)
     if (cached) {
-      setComments(cached)
+      setComments(sortCommentsNewestFirst(cached))
       setLoading(false)
     } else {
       setLoading(true)
@@ -235,7 +242,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
     setListError(null)
     try {
       const data = await getComments(taskId)
-      setComments(data)
+      setComments(sortCommentsNewestFirst(data))
     } catch (err) {
       if (cached == null) {
         setListError(getApiErrorMessage(err))
@@ -280,19 +287,25 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
         Comments
       </h2>
       <p className="mb-5 text-sm text-slate-500">
-        Write a comment below and click Send. Click any comment to edit it.
+        Write a comment below and click Send (or press Enter). Shift+Enter for a
+        new line. Click any comment to edit it.
       </p>
 
       <div className="mb-6 space-y-2">
         <label className="block text-sm font-semibold text-slate-800">
           New comment
         </label>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white cursor-text">
           <SimpleEditor
             key={`composer-${taskId}-${composerKey}`}
             embedded
             compact
             editable
+            placeholder="Write a comment…"
+            submitOnEnter
+            onEnterSubmit={() => {
+              void handleSend()
+            }}
             initialContent={EMPTY_DOC}
             onEditorReady={(editor) => {
               composerRef.current = editor
@@ -348,8 +361,10 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
                 onStopEditing={() => setEditingCommentId(null)}
                 onUpdated={(updated) => {
                   setComments((prev) =>
-                    prev.map((c) =>
-                      String(c.id) === String(updated.id) ? updated : c
+                    sortCommentsNewestFirst(
+                      prev.map((c) =>
+                        String(c.id) === String(updated.id) ? updated : c
+                      )
                     )
                   )
                 }}

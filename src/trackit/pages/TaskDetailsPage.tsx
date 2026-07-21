@@ -37,6 +37,10 @@ export function TaskDetailsPage() {
   const [apiError, setApiError] = useState<string | null>(null)
 
   useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [taskId])
+
+  useEffect(() => {
     let cancelled = false
     const fromCache = getCachedTask(taskId)
 
@@ -208,7 +212,7 @@ export function TaskDetailsPage() {
                 {/* Editing enable / disable: description pe click → editing on */}
                 <div
                   className={`overflow-hidden rounded-xl border border-slate-200 bg-white${
-                    isEditing ? "" : " cursor-pointer"
+                    isEditing ? " cursor-text" : " cursor-pointer"
                   }`}
                   onClick={enableEditing}
                 >
@@ -216,6 +220,12 @@ export function TaskDetailsPage() {
                     key={String(taskId)}
                     embedded
                     editable={isEditing}
+                    autoFocus={isEditing}
+                    placeholder="Click to edit description…"
+                    submitOnEnter={isEditing}
+                    onEnterSubmit={() => {
+                      void handleSave()
+                    }}
                     initialContent={savedContent}
                     onEditorReady={(editor) => {
                       editorRef.current = editor

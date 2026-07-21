@@ -29,6 +29,15 @@
   outline: none;
   caret-color: var(--tt-cursor-color);
 
+  &:focus,
+  &.ProseMirror-focused {
+    caret-color: var(--tt-cursor-color);
+  }
+
+  &.ProseMirror-hideselection:not(:focus):not(.ProseMirror-focused) {
+    caret-color: transparent;
+  }
+
   // Paragraph spacing
   p:not(:first-child):not(td p):not(th p) {
     margin-top: 20px;
@@ -60,10 +69,6 @@
   .ProseMirror-selectednode:not(img):not(pre):not(.react-renderer) {
     border-radius: var(--tt-radius-md);
     background-color: var(--tt-selection-color);
-  }
-
-  .ProseMirror-hideselection {
-    caret-color: transparent;
   }
 
   // Resize cursor
@@ -187,6 +192,39 @@
 
 .is-empty[data-placeholder]:has(> .ProseMirror-trailingBreak):before {
   color: var(--placeholder-color);
+}
+
+/* Focus par placeholder hide — caret dikhe */
+.tiptap.ProseMirror.ProseMirror-focused .is-empty[data-placeholder]::before {
+  opacity: 0;
+}
+
+/* Empty + focused: blink caret jab tak type na ho */
+.tiptap.ProseMirror.ProseMirror-focused
+  p.is-empty[data-placeholder]:has(> .ProseMirror-trailingBreak:only-child) {
+  caret-color: transparent;
+}
+
+.tiptap.ProseMirror.ProseMirror-focused
+  p.is-empty[data-placeholder]:has(> .ProseMirror-trailingBreak:only-child)::after {
+  content: "";
+  display: inline-block;
+  width: 1.5px;
+  height: 1.05em;
+  background-color: var(--tt-cursor-color, #6229ff);
+  vertical-align: text-bottom;
+  animation: tiptap-caret-blink 1s step-end infinite;
+  pointer-events: none;
+}
+
+@keyframes tiptap-caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* =====================

@@ -6,6 +6,7 @@ import {
   setCachedComments,
   upsertCachedComment,
 } from "@/trackit/api/commentsCache"
+import { sortCommentsNewestFirst } from "@/trackit/utils/sortComments"
 
 export type CommentContent =
   | Record<string, unknown>
@@ -54,7 +55,7 @@ export async function getComments(
   taskId: number | string
 ): Promise<TaskComment[]> {
   const { data } = await apiClient.get<unknown>(`/tasks/${taskId}/comments`)
-  const comments = normalizeCommentsResponse(data)
+  const comments = sortCommentsNewestFirst(normalizeCommentsResponse(data))
   setCachedComments(taskId, comments)
   return comments
 }
@@ -68,6 +69,10 @@ export async function createComment(
     payload
   )
   upsertCachedComment(taskId, data)
+  const sorted = sortCommentsNewestFirst([
+    ...(getCachedComments(taskId) ?? []),
+  ])
+  setCachedComments(taskId, sorted)
   return data
 }
 
@@ -81,6 +86,8 @@ export async function updateComment(
     payload
   )
   upsertCachedComment(taskId, data)
+  const sorted = sortCommentsNewestFirst(getCachedComments(taskId) ?? [])
+  setCachedComments(taskId, sorted)
   return data
 }
 

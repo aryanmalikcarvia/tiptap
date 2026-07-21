@@ -132,6 +132,35 @@ body,
   padding: 0.75rem 0.875rem 1rem;
 }
 
+.simple-editor-wrapper.is-embedded.is-compact
+  .tiptap.ProseMirror
+  p.is-empty::before {
+  color: #94a3b8;
+  font-style: normal;
+}
+
+/* Typing enabled: text + blinking caret dikhe */
+.simple-editor-wrapper.is-editable .simple-editor-content,
+.simple-editor-wrapper.is-editable
+  .simple-editor-content
+  .tiptap.ProseMirror.simple-editor {
+  cursor: text;
+}
+
+.simple-editor-wrapper.is-editable
+  .tiptap.ProseMirror.simple-editor[contenteditable="true"]:focus,
+.simple-editor-wrapper.is-editable
+  .tiptap.ProseMirror.simple-editor.ProseMirror-focused {
+  caret-color: var(--tt-cursor-color, #6229ff);
+}
+
+/* Embedded editors: focused empty state */
+.simple-editor-wrapper.is-editable.is-embedded
+  .tiptap.ProseMirror.ProseMirror-focused
+  .is-empty[data-placeholder]::before {
+  opacity: 0;
+}
+
 .simple-editor-wrapper.is-embedded .tiptap-toolbar[data-variant="fixed"] {
   background: #f8fafc;
   border-bottom-color: #e2e8f0;

@@ -13,7 +13,7 @@ import { Typography } from "@tiptap/extension-typography"
 import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
-import { Selection } from "@tiptap/extensions"
+import { Selection, Placeholder } from "@tiptap/extensions"
 
 
 import { CodeBlockShortcut } from "@/components/tiptap-extension/code-block-shortcut"
@@ -91,9 +91,14 @@ export type SimpleEditorProps = {
   initialContent?: Content
   onEditorReady?: (editor: Editor) => void
   embedded?: boolean
- 
   editable?: boolean
   compact?: boolean
+  /** Enter → submit; Shift+Enter → new line */
+  submitOnEnter?: boolean
+  onEnterSubmit?: () => void
+  /** editable hone par cursor focus */
+  autoFocus?: boolean
+  placeholder?: string
 }
 
 const insertUploadedFile = (
@@ -226,6 +231,10 @@ export function SimpleEditor({
   embedded = false,
   editable = true,
   compact = false,
+  submitOnEnter = false,
+  onEnterSubmit,
+  autoFocus = false,
+  placeholder,
 }: SimpleEditorProps = {}) {
   const isMobile = useIsBreakpoint()
   const { height } = useWindowSize()
@@ -234,7 +243,14 @@ export function SimpleEditor({
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
   const onReadyRef = useRef(onEditorReady)
+  const editorInstanceRef = useRef<Editor | null>(null)
+  const submitOnEnterRef = useRef(submitOnEnter)
+  const onEnterSubmitRef = useRef(onEnterSubmit)
+  const editableRef = useRef(editable)
   onReadyRef.current = onEditorReady
+  submitOnEnterRef.current = submitOnEnter
+  onEnterSubmitRef.current = onEnterSubmit
+  editableRef.current = editable
 
   useEffect(() => {
     document.documentElement.classList.remove("dark")
@@ -251,6 +267,55 @@ export function SimpleEditor({
         autocapitalize: "off",
         "aria-label": "Main content area, start typing to enter text.",
         class: "simple-editor",
+      },
+      handleKeyDown: (_view, event) => {
+        if (!submitOnEnterRef.current) return false
+        const ed = editorInstanceRef.current
+        if (!ed) return false
+
+        if (event.key === "Enter" && event.shiftKey) {
+          event.preventDefault()
+          ed.chain().focus().setHardBreak().run()
+          return true
+        }
+
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault()
+          onEnterSubmitRef.current?.()
+          return true
+        }
+
+        return false
+      },
+      handleDOMEvents: {
+        click: (view) => {
+          if (!editableRef.current) return false
+          const ed = editorInstanceRef.current
+          if (!ed || ed.isDestroyed) return false
+
+          requestAnimationFrame(() => {
+            if (!view.dom.isConnected) return
+            if (ed.isEmpty) {
+              ed.commands.focus("start")
+            } else if (!view.hasFocus()) {
+              view.focus()
+            }
+            view.dom.classList.add("ProseMirror-focused")
+          })
+          return false
+        },
+        focus: (view) => {
+          view.dom.classList.add("ProseMirror-focused")
+          const ed = editorInstanceRef.current
+          if (ed && !ed.isDestroyed && ed.isEmpty) {
+            requestAnimationFrame(() => ed.commands.focus("start"))
+          }
+          return false
+        },
+        blur: (view) => {
+          view.dom.classList.remove("ProseMirror-focused")
+          return false
+        },
       },
     },
     extensions: [
@@ -308,6 +373,12 @@ export function SimpleEditor({
       Superscript,
       Subscript,
       Selection,
+      Placeholder.configure({
+        placeholder: placeholder ?? (compact ? "Write here…" : "Write something…"),
+        emptyNodeClass: "is-empty",
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: true,
+      }),
       ImageUploadNode.configure({
         accept: "image/*,video/*,application/pdf,.pdf,.mp4,.webm,.mov",
         maxSize: MAX_MEDIA_FILE_SIZE,
@@ -321,18 +392,42 @@ export function SimpleEditor({
         ? initialContent
         : defaultContent || EMPTY_DOC,
     onCreate: ({ editor: ed }) => {
+      editorInstanceRef.current = ed
       onReadyRef.current?.(ed)
     },
   })
 
   useEffect(() => {
-    if (editor) onReadyRef.current?.(editor)
+    if (!editor) return
+    editorInstanceRef.current = editor
+    onReadyRef.current?.(editor)
   }, [editor])
 
   useEffect(() => {
     if (editor) {
       editor.setEditable(editable)
     }
+  }, [editor, editable])
+
+  useEffect(() => {
+    if (editor && editable && autoFocus) {
+      queueMicrotask(() => editor.commands.focus("start"))
+    }
+  }, [editor, editable, autoFocus])
+
+  useEffect(() => {
+    if (!editor || !editable) return
+
+    const dom = editor.view.dom
+    const syncEmptyCaret = () => {
+      dom.classList.add("ProseMirror-focused")
+      if (editor.isEmpty) {
+        editor.commands.focus("start")
+      }
+    }
+
+    dom.addEventListener("focus", syncEmptyCaret)
+    return () => dom.removeEventListener("focus", syncEmptyCaret)
   }, [editor, editable])
 
   const rect = useCursorVisibility({
@@ -348,7 +443,7 @@ export function SimpleEditor({
 
   return (
     <div
-      className={`simple-editor-wrapper${embedded ? " is-embedded" : ""}${compact ? " is-compact" : ""}`}
+      className={`simple-editor-wrapper${embedded ? " is-embedded" : ""}${compact ? " is-compact" : ""}${editable ? " is-editable" : ""}`}
     >
       <EditorContext.Provider value={{ editor }}>
         {/* Editing enable / disable: toolbar sirf editable=true par dikhe */}
