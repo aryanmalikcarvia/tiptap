@@ -244,8 +244,7 @@ export function TaskDetailsPage() {
                     key={String(taskId)}
                     embedded
                     editable={isEditing}
-                    autoFocus={false }
-                    placeholder="Click to edit description…"
+                    autoFocus={false}
                     initialContent={savedContent}
                     onEditorReady={(editor) => {
                       editorRef.current = editor

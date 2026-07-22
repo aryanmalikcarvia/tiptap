@@ -44,8 +44,15 @@
 
   li {
     p {
+      position: relative;
       margin-top: 0;
+      margin-bottom: 0;
       line-height: 1.6;
+
+      .ProseMirror-trailingBreak {
+        display: inline;
+        line-height: inherit;
+      }
     }
   }
 

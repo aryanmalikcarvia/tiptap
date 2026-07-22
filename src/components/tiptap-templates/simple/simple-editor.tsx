@@ -13,9 +13,9 @@ import { Typography } from "@tiptap/extension-typography"
 import { Highlight } from "@tiptap/extension-highlight"
 import { Subscript } from "@tiptap/extension-subscript"
 import { Superscript } from "@tiptap/extension-superscript"
-import { Selection, Placeholder, Focus } from "@tiptap/extensions"
+import { Selection, Placeholder } from "@tiptap/extensions"
 
-
+import { CaretFocus } from "@/components/tiptap-extension/caret-focus-extension"
 import { CodeBlockShortcut } from "@/components/tiptap-extension/code-block-shortcut"
 import { MentionExtension } from "@/components/tiptap-extension/mention-extension"
 
@@ -290,6 +290,18 @@ export function SimpleEditor({
           openOnClick: false,
           enableClickSelection: true,
         },
+        trailingNode: {
+          notAfter: [
+            "paragraph",
+            "heading",
+            "blockquote",
+            "codeBlock",
+            "bulletList",
+            "orderedList",
+            "taskList",
+            "horizontalRule",
+          ],
+        },
       }),
       CodeBlockShortcut,
       MentionExtension,
@@ -334,19 +346,20 @@ export function SimpleEditor({
           })
         },
       }),
+      
       Typography,
       Superscript,
       Subscript,
       Selection,
-      Focus.configure({
-        className: "has-focus",
-        mode: "deepest",
-      }),
+      CaretFocus,
       Placeholder.configure({
-        placeholder: placeholder ?? (compact ? "Write here…" : "Write something…"),
+        placeholder:
+          placeholder ??
+          (compact ? "Write here…" : embedded ? "" : "Write something…"),
         emptyNodeClass: "is-empty",
         showOnlyWhenEditable: true,
         showOnlyCurrent: true,
+        includeChildren: true,
       }),
       ImageUploadNode.configure({
         accept: "image/*,video/*,application/pdf,.pdf,.mp4,.webm,.mov",
@@ -386,17 +399,21 @@ export function SimpleEditor({
 
     const dom = editor.view.dom
     const syncFocused = () => {
-      dom.classList.add("ProseMirror-focused")
+      dom.classList.toggle("ProseMirror-focused", editor.view.hasFocus())
     }
 
     dom.addEventListener("focus", syncFocused)
+    dom.addEventListener("blur", syncFocused)
     editor.on("selectionUpdate", syncFocused)
     editor.on("focus", syncFocused)
+    editor.on("blur", syncFocused)
 
     return () => {
       dom.removeEventListener("focus", syncFocused)
+      dom.removeEventListener("blur", syncFocused)
       editor.off("selectionUpdate", syncFocused)
       editor.off("focus", syncFocused)
+      editor.off("blur", syncFocused)
     }
   }, [editor, editable])
 

@@ -91,13 +91,18 @@ export async function handleMediaImageUpload(
 ): Promise<string> {
   try {
     const item = await uploadAndResolveMedia(file, onProgress, abortSignal)
+    console.log("Uploaded url: ", item.url)
     return item.url
   } catch (error) {
+    console.error("Upload failed : ", error )
     console.warn(
       "Media API upload failed, using local preview:",
       getApiErrorMessage(error)
     )
     onProgress?.({ progress: 100 })
-    return URL.createObjectURL(file)
+
+    const blobUrl = URL.createObjectURL(file)
+    console.log("using blob url ", blobUrl)
+    return blobUrl
   }
 }
