@@ -1,40 +1,14 @@
 // trackit frontend
-import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Plus } from "lucide-react"
-import { getApiErrorMessage } from "@/api/mediaApi"
-import {
-  getCachedTasks,
-  getTasks,
-  type Task,
-} from "@/trackit/api/tasksApi"
+import { useTasks } from "@/hooks/queries/useTasks"
 import { Button } from "@/components/ui/button"
 import { TasksTable } from "@/trackit/components/TasksTable"
 import { TRACKIT_ROUTES } from "@/trackit/routes/paths"
 
 export function HomePage() {
   const navigate = useNavigate()
-  const [tasks, setTasks] = useState<Task[]>(() => getCachedTasks() ?? [])
-  const [loading, setLoading] = useState(() => getCachedTasks() == null)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadTasks = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!opts?.silent) setLoading(true)
-    setError(null)
-    try {
-      const data = await getTasks()
-      setTasks(data)
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-      if (getCachedTasks() == null) setTasks([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadTasks({ silent: getCachedTasks() != null })
-  }, [loadTasks])
+  const { tasks, setTasks, isPending, error } = useTasks()
 
   return (
     <div className="trackit-page">
@@ -62,11 +36,11 @@ export function HomePage() {
 
         {error ? (
           <div className="mb-4 rounded-xl border border-red-200 bg-[#fef2f2] px-4 py-3 text-sm text-[#ef4444]">
-            {error}
+            {error.message}
           </div>
         ) : null}
 
-        {loading && tasks.length === 0 ? (
+        {isPending && tasks.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#e5eaf2] bg-white px-4 py-16 text-center text-sm text-[#64748b]">
             Loading tasks…
           </div>

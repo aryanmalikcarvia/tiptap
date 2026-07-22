@@ -3,14 +3,14 @@ import { useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import type { Content, Editor } from "@tiptap/react"
-import { getCachedTask, getTask, updateTask } from "@/trackit/api/tasksApi"
-import { getApiErrorMessage } from "@/api/mediaApi"
+import { useTask } from "@/hooks/queries/useTask"
+import { useTaskActions } from "@/hooks/queries/useTaskActions"
+import { getApiErrorMessage } from "@/lib/apiError"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { isEditorContentEmpty } from "@/trackit/utils/isEditorEmpty"
-import { toEditorContent } from "@/trackit/utils/toEditorContent"
 import { TRACKIT_ROUTES } from "@/trackit/routes/paths"
 import { TaskCommentsSection } from "@/trackit/components/TaskCommentsSection"
 
@@ -22,78 +22,46 @@ export function TaskDetailsPage() {
   const titleInputRef = useRef<HTMLInputElement>(null)
   const pendingTitleFocusRef = useRef(false)
 
-  // Editing enable / disable: page khulte hi band; title/description pe click se on
   const [isEditing, setIsEditing] = useState(false)
-
-  const cached = getCachedTask(taskId)
-  const [title, setTitle] = useState(() => cached?.title ?? "")
-  const [savedTitle, setSavedTitle] = useState(() => cached?.title ?? "")
-  const [savedContent, setSavedContent] = useState<Content | null>(() =>
-    cached ? toEditorContent(cached.content) : null
-  )
-  const [loading, setLoading] = useState(() => cached == null)
-  const [saving, setSaving] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
+
+  const {
+    title,
+    setTitle,
+    savedTitle,
+    setSavedTitle,
+    savedContent,
+    setSavedContent,
+    isPending,
+    error: loadError,
+    setError,
+  } = useTask(taskId)
+
+  const { update, isPending: saving } = useTaskActions()
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [taskId])
 
   useEffect(() => {
-    let cancelled = false
-    const fromCache = getCachedTask(taskId)
-
-    if (fromCache) {
-      setTitle(fromCache.title ?? "")
-      setSavedTitle(fromCache.title ?? "")
-      setSavedContent(toEditorContent(fromCache.content))
-      setLoading(false)
-    } else {
-      setLoading(true)
-      setSavedContent(null)
-      setTitle("")
-      setSavedTitle("")
-    }
-
     setApiError(null)
+    setError(null)
     setIsEditing(false)
+  }, [taskId, setError])
 
-    ;(async () => {
-      try {
-        const task = await getTask(taskId)
-        if (cancelled) return
-        const nextTitle = task.title ?? ""
-        setTitle(nextTitle)
-        setSavedTitle(nextTitle)
-        setSavedContent(toEditorContent(task.content))
-      } catch (err) {
-        if (!cancelled && getCachedTask(taskId) == null) {
-          setApiError(getApiErrorMessage(err))
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [taskId])
-
-  // Silent refresh ke baad editor content sync (sirf read-only mode me)
   useEffect(() => {
     if (isEditing || !savedContent || !editorRef.current) return
     editorRef.current.commands.setContent(savedContent)
   }, [savedContent, isEditing])
 
-  // Editing enable / disable: title ya description pe click → editing on
   const enableEditing = () => {
-    if (!isEditing && !loading) setIsEditing(true)
+    if (!isEditing && !isPending) setIsEditing(true)
   }
 
   const enableEditingWithTitleFocus = () => {
-    if (loading) return
+    if (isPending) return
     if (!isEditing) {
       pendingTitleFocusRef.current = true
       setIsEditing(true)
@@ -107,7 +75,6 @@ export function TaskDetailsPage() {
     }
   }, [isEditing])
 
-  // Editing enable / disable: Cancel → changes discard, wapas read-only
   const handleCancel = () => {
     setTitle(savedTitle)
     setTitleError(null)
@@ -131,7 +98,7 @@ export function TaskDetailsPage() {
       setTitleError(null)
     }
 
-    if (isEditorContentEmpty(editor)) {
+    if (isEditorContentEmpty(editor) || !editor) {
       setDescriptionError("Description is required")
       hasError = true
     } else {
@@ -140,25 +107,23 @@ export function TaskDetailsPage() {
 
     if (hasError || !editor) return
 
-    setSaving(true)
     setApiError(null)
     try {
       const content = editor.getJSON()
-      await updateTask(taskId, {
+      await update(taskId, {
         title: trimmed,
         content,
       })
       setSavedTitle(trimmed)
       setSavedContent(content as Content)
-      // Editing enable / disable: save ke baad wapas read-only
       setIsEditing(false)
       toast("✅ Task updated successfully")
     } catch (err) {
       setApiError(getApiErrorMessage(err))
-    } finally {
-      setSaving(false)
     }
   }
+
+  const displayError = apiError || loadError?.message
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -179,13 +144,13 @@ export function TaskDetailsPage() {
             {isEditing ? "Edit Task" : "Task Details"}
           </h1>
 
-          {apiError && (
+          {displayError && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {apiError}
+              {displayError}
             </div>
           )}
 
-          {loading || !savedContent ? (
+          {isPending || !savedContent ? (
             <p className="py-10 text-center text-sm text-slate-500">
               Loading task…
             </p>
@@ -198,7 +163,6 @@ export function TaskDetailsPage() {
                 >
                   Title{isEditing && <span className="text-red-500"> *</span>}
                 </label>
-                {/* Title sirf tab editable hai jab description se editing already on ho */}
                 <Input
                   ref={titleInputRef}
                   id="task-details-title"
@@ -212,7 +176,7 @@ export function TaskDetailsPage() {
                   readOnly={!isEditing}
                   disabled={saving}
                   onMouseDown={(e) => {
-                    if (!isEditing && !loading) {
+                    if (!isEditing && !isPending) {
                       e.preventDefault()
                       enableEditingWithTitleFocus()
                     }
@@ -233,7 +197,6 @@ export function TaskDetailsPage() {
                   Description
                   {isEditing && <span className="text-red-500"> *</span>}
                 </label>
-                {/* Editing enable / disable: description pe click → editing on */}
                 <div
                   className={`overflow-hidden rounded-xl border border-slate-200 bg-white${
                     isEditing ? " cursor-text" : " cursor-pointer"
@@ -283,7 +246,9 @@ export function TaskDetailsPage() {
           )}
         </div>
 
-        {!loading && savedContent && <TaskCommentsSection taskId={taskId} />}
+        {!isPending && savedContent && (
+          <TaskCommentsSection taskId={taskId} />
+        )}
       </div>
     </div>
   )

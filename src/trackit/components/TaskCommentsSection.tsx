@@ -3,14 +3,11 @@ import { useEffect, useRef, useState } from "react"
 import type { Content, Editor } from "@tiptap/react"
 import { Send, Trash2 } from "lucide-react"
 import { sortCommentsNewestFirst } from "@/trackit/utils/sortComments"
-import {
-  createComment,
-  getCachedComments,
-  getComments,
-  updateComment,
-  type TaskComment,
-} from "@/trackit/api/commentsApi"
-import { getApiErrorMessage } from "@/api/mediaApi"
+import { updateComment } from "@/api/commentsApi"
+import type { TaskComment } from "@/types/comment"
+import { useComments } from "@/hooks/queries/useComments"
+import { useCommentActions } from "@/hooks/queries/useCommentActions"
+import { getApiErrorMessage } from "@/lib/apiError"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
@@ -215,43 +212,24 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
   const { toast } = useToast()
   const composerRef = useRef<Editor | null>(null)
   const [composerKey, setComposerKey] = useState(0)
-  const [comments, setComments] = useState<TaskComment[]>(() =>
-    sortCommentsNewestFirst(getCachedComments(taskId) ?? [])
-  )
-  const [editingCommentId, setEditingCommentId] = useState<number | string | null>(
-    null
-  )
-  const [loading, setLoading] = useState(() => getCachedComments(taskId) == null)
-  const [sending, setSending] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState<
+    number | string | null
+  >(null)
   const [composerError, setComposerError] = useState<string | null>(null)
-  const [listError, setListError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<TaskComment | null>(null)
 
-  const loadComments = async () => {
-    const cached = getCachedComments(taskId)
-    if (cached) {
-      setComments(sortCommentsNewestFirst(cached))
-      setLoading(false)
-    } else {
-      setLoading(true)
-    }
-    setListError(null)
-    try {
-      const data = await getComments(taskId)
-      setComments(sortCommentsNewestFirst(data))
-    } catch (err) {
-      if (cached == null) {
-        setListError(getApiErrorMessage(err))
-        setComments([])
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    comments,
+    setComments,
+    isPending: loading,
+    error: listError,
+    refetch,
+  } = useComments(taskId)
+
+  const { create, isPending: sending } = useCommentActions(taskId)
 
   useEffect(() => {
     setEditingCommentId(null)
-    void loadComments()
   }, [taskId])
 
   const handleSend = async () => {
@@ -261,19 +239,16 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
       return
     }
 
-    setSending(true)
     setComposerError(null)
     try {
       const content = editor.getJSON()
-      await createComment(taskId, { content })
+      await create({ content })
       toast("✅ Comment posted")
       setComposerKey((k) => k + 1)
       composerRef.current = null
-      await loadComments()
+      await refetch()
     } catch (err) {
       setComposerError(getApiErrorMessage(err))
-    } finally {
-      setSending(false)
     }
   }
 
@@ -329,7 +304,7 @@ export function TaskCommentsSection({ taskId }: TaskCommentsSectionProps) {
 
         {listError && comments.length === 0 && (
           <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {listError}
+            {listError.message}
           </div>
         )}
 

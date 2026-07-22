@@ -1,7 +1,7 @@
 // trackit frontend
-import { useState } from "react"
-import { deleteTask, type Task } from "@/trackit/api/tasksApi"
-import { getApiErrorMessage } from "@/api/mediaApi"
+import { useTaskActions } from "@/hooks/queries/useTaskActions"
+import type { Task } from "@/types/task"
+import { getApiErrorMessage } from "@/lib/apiError"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -27,22 +27,19 @@ export function DeleteTaskDialog({
   onDeleted,
 }: DeleteTaskDialogProps) {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { remove, isPending, error, reset } = useTaskActions()
 
   const handleDelete = async () => {
     if (!task) return
-    setLoading(true)
-    setError(null)
+    reset()
     try {
-      await deleteTask(task.id)
+      await remove(task.id)
       onDeleted(task.id)
       onOpenChange(false)
       toast("✅ Task deleted successfully")
     } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setLoading(false)
+      // error already in hook; surface via getApiErrorMessage if needed
+      void getApiErrorMessage(err)
     }
   }
 
@@ -50,13 +47,13 @@ export function DeleteTaskDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setError(null)
+        if (!next) reset()
         onOpenChange(next)
       }}
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-white" >Delete this task?</DialogTitle>
+          <DialogTitle className="text-white">Delete this task?</DialogTitle>
           <DialogDescription>
             {task
               ? `“${task.title || `Task #${task.id}`}” will be removed. This cannot be undone.`
@@ -64,13 +61,13 @@ export function DeleteTaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error.message}</p> : null}
 
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
-            disabled={loading}
+            disabled={isPending}
             onClick={() => onOpenChange(false)}
           >
             No
@@ -78,10 +75,10 @@ export function DeleteTaskDialog({
           <Button
             type="button"
             variant="destructive"
-            disabled={loading}
+            disabled={isPending}
             onClick={() => void handleDelete()}
           >
-            {loading ? "Deleting…" : "Yes"}
+            {isPending ? "Deleting…" : "Yes"}
           </Button>
         </DialogFooter>
       </DialogContent>

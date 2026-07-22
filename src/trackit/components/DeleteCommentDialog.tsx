@@ -1,7 +1,6 @@
 // trackit frontend
-import { useState } from "react"
-import { deleteComment, type TaskComment } from "@/trackit/api/commentsApi"
-import { getApiErrorMessage } from "@/api/mediaApi"
+import { useCommentActions } from "@/hooks/queries/useCommentActions"
+import type { TaskComment } from "@/types/comment"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,22 +28,18 @@ export function DeleteCommentDialog({
   onDeleted,
 }: DeleteCommentDialogProps) {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { remove, isPending, error, reset } = useCommentActions(taskId)
 
   const handleDelete = async () => {
     if (!comment) return
-    setLoading(true)
-    setError(null)
+    reset()
     try {
-      await deleteComment(taskId, comment.id)
+      await remove(comment.id)
       onDeleted(comment.id)
       onOpenChange(false)
       toast("✅ Comment deleted successfully")
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setLoading(false)
+    } catch {
+      /* error in hook */
     }
   }
 
@@ -52,7 +47,7 @@ export function DeleteCommentDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setError(null)
+        if (!next) reset()
         onOpenChange(next)
       }}
     >
@@ -64,13 +59,13 @@ export function DeleteCommentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error.message}</p> : null}
 
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
-            disabled={loading}
+            disabled={isPending}
             onClick={() => onOpenChange(false)}
           >
             No
@@ -78,10 +73,10 @@ export function DeleteCommentDialog({
           <Button
             type="button"
             variant="destructive"
-            disabled={loading}
+            disabled={isPending}
             onClick={() => void handleDelete()}
           >
-            {loading ? "Deleting…" : "Yes"}
+            {isPending ? "Deleting…" : "Yes"}
           </Button>
         </DialogFooter>
       </DialogContent>

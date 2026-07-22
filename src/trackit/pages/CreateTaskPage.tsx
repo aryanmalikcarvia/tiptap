@@ -3,8 +3,8 @@ import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import type { Content, Editor } from "@tiptap/react"
-import { createTask } from "@/trackit/api/tasksApi"
-import { getApiErrorMessage } from "@/api/mediaApi"
+import { useTaskActions } from "@/hooks/queries/useTaskActions"
+import { getApiErrorMessage } from "@/lib/apiError"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
@@ -20,9 +20,9 @@ const EMPTY_DOC: Content = {
 export function CreateTaskPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { create, isPending, error: actionError, reset } = useTaskActions()
   const editorRef = useRef<Editor | null>(null)
   const [title, setTitle] = useState("")
-  const [creating, setCreating] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function CreateTaskPage() {
       setTitleError(null)
     }
 
-    if (isEditorContentEmpty(editor)) {
+    if (isEditorContentEmpty(editor) || !editor) {
       setDescriptionError("Description is required")
       hasError = true
     } else {
@@ -48,10 +48,10 @@ export function CreateTaskPage() {
 
     if (hasError || !editor) return
 
-    setCreating(true)
     setApiError(null)
+    reset()
     try {
-      await createTask({
+      await create({
         title: trimmed,
         content: editor.getJSON(),
       })
@@ -59,8 +59,6 @@ export function CreateTaskPage() {
       navigate(TRACKIT_ROUTES.home)
     } catch (err) {
       setApiError(getApiErrorMessage(err))
-    } finally {
-      setCreating(false)
     }
   }
 
@@ -71,7 +69,7 @@ export function CreateTaskPage() {
           type="button"
           variant="outline"
           onClick={() => navigate(TRACKIT_ROUTES.home)}
-          disabled={creating}
+          disabled={isPending}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 size-4" />
@@ -83,11 +81,11 @@ export function CreateTaskPage() {
             Create Task
           </h1>
 
-          {apiError ? (
+          {(apiError || actionError) && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {apiError}
+              {apiError || actionError?.message}
             </div>
-          ) : null}
+          )}
 
           <div className="mb-5 space-y-2">
             <label
@@ -101,7 +99,7 @@ export function CreateTaskPage() {
               className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:ring-blue-100"
               placeholder="Enter task title"
               value={title}
-              disabled={creating}
+              disabled={isPending}
               onChange={(e) => {
                 setTitle(e.target.value)
                 if (titleError) setTitleError(null)
@@ -137,7 +135,7 @@ export function CreateTaskPage() {
               type="button"
               variant="secondary"
               className="border-slate-200 bg-white text-slate-800 hover:bg-gray-200"
-              disabled={creating}
+              disabled={isPending}
               onClick={() => navigate(TRACKIT_ROUTES.home)}
             >
               Cancel
@@ -145,10 +143,10 @@ export function CreateTaskPage() {
             <Button
               type="button"
               className="bg-blue-500 text-white hover:bg-blue-600"
-              disabled={creating}
+              disabled={isPending}
               onClick={() => void handleCreate()}
             >
-              {creating ? "Creating..." : "Create Task"}
+              {isPending ? "Creating..." : "Create Task"}
             </Button>
           </div>
         </div>

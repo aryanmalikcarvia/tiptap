@@ -1,8 +1,6 @@
-import {
-  getApiErrorMessage,
-  uploadMedia,
-  type UploadMediaResponse,
-} from "@/api/mediaApi"
+import { getApiErrorMessage } from "@/lib/apiError"
+import { uploadMedia } from "@/api/mediaApi"
+import type { UploadMediaResponse } from "@/types/media"
 
 export const MAX_MEDIA_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
@@ -38,9 +36,7 @@ export function getMediaKind(fileOrCid: File | string): MediaKind {
   return "other"
 }
 
-/**
- * POST upload. Fail pe local object URL — editor paste/upload tootna nahi chahiye.
- */
+/** POST upload — always returns backend url (no blob fallback). */
 export async function uploadAndResolveMedia(
   file: File,
   onProgress?: (event: { progress: number }) => void,
@@ -73,6 +69,10 @@ export async function uploadAndResolveMedia(
     throw new Error("Upload cancelled")
   }
 
+  if (!uploaded.url || uploaded.url.startsWith("blob:")) {
+    throw new Error("Upload did not return a backend media url")
+  }
+
   onProgress?.({ progress: 100 })
 
   return {
@@ -83,26 +83,12 @@ export async function uploadAndResolveMedia(
   }
 }
 
-/** TipTap image upload / paste — API pehle, fail pe local blob */
+/** TipTap image upload / paste — backend url only */
 export async function handleMediaImageUpload(
   file: File,
   onProgress?: (event: { progress: number }) => void,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  try {
-    const item = await uploadAndResolveMedia(file, onProgress, abortSignal)
-    console.log("Uploaded url: ", item.url)
-    return item.url
-  } catch (error) {
-    console.error("Upload failed : ", error )
-    console.warn(
-      "Media API upload failed, using local preview:",
-      getApiErrorMessage(error)
-    )
-    onProgress?.({ progress: 100 })
-
-    const blobUrl = URL.createObjectURL(file)
-    console.log("using blob url ", blobUrl)
-    return blobUrl
-  }
+  const item = await uploadAndResolveMedia(file, onProgress, abortSignal)
+  return item.url
 }

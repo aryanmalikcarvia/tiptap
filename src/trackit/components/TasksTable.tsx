@@ -1,7 +1,7 @@
 // trackit frontend
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import type { Task } from "@/trackit/api/tasksApi";
+import type { Task } from "@/types/task";
 import { Button } from "@/components/ui/button";
 import {
   Table,

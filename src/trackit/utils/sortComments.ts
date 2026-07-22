@@ -1,5 +1,5 @@
 // trackit frontend
-import type { TaskComment } from "@/trackit/api/commentsApi"
+import type { TaskComment } from "@/types/comment"
 
 function commentTimestamp(comment: TaskComment): number {
   const raw = comment.createdAt ?? comment.updatedAt ?? ""
