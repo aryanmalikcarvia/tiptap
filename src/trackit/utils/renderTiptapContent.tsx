@@ -71,6 +71,82 @@ function renderBlock(nodes: TiptapLikeNode[] | undefined): ReactNode[] {
       return
     }
 
+    if (node.type === "codeBlock") {
+  const code = (node.content ?? [])
+    .map((n) => n.text ?? "")
+    .join("")
+
+  out.push(
+    <pre
+      key={`code-${index}`}
+      className="my-3 overflow-x-auto rounded-lg bg-slate-100 p-4"
+    >
+      <code>{code}</code>
+    </pre>
+  )
+
+  return
+}
+    if (node.type === "bulletList") {
+  out.push(
+    <ul
+      key={`ul-${index}`}
+      className="list-disc pl-6"
+    >
+      {renderBlock(node.content)}
+    </ul>
+  )
+  return
+}   
+
+if (node.type === "orderedList") {
+  out.push(
+    <ol
+      key={`ol-${index}`}
+      className="list-decimal pl-6"
+    >
+      {renderBlock(node.content)}
+    </ol>
+  )
+  return
+}
+
+if (node.type === "listItem") {
+  out.push(
+    <li key={`li-${index}`}>
+      {renderBlock(node.content)}
+    </li>
+  )
+  return
+}
+
+if (node.type === "taskItem") {
+  out.push(
+    <div
+      key={`task-${index}`}
+      className="flex items-start gap-2"
+    >
+      <input
+        type="checkbox"
+        checked={Boolean(node.attrs?.checked)}
+        readOnly
+      />
+      <div>{renderBlock(node.content)}</div>
+    </div>
+  )
+  return
+}
+
+if (node.type === "horizontalRule") {
+  out.push(
+    <hr
+      key={`hr-${index}`}
+      className="my-4 border-slate-300"
+    />
+  )
+  return
+}
+
     if (node.type === "blockquote") {
       const children = renderBlock(node.content)
       if (children.length > 0) {
@@ -106,6 +182,63 @@ function renderBlock(nodes: TiptapLikeNode[] | undefined): ReactNode[] {
       return
     }
 
+    if (node.type === "video") {
+  const src =
+    typeof node.attrs?.src === "string"
+      ? node.attrs.src
+      : ""
+
+  out.push(
+    <video
+      key={`video-${index}`}
+      controls
+      src={src}
+      className="my-2 max-w-full rounded-lg"
+    />
+  )
+
+  return
+}
+
+
+
+
+if (node.type === "pdf") {
+  const src =
+    typeof node.attrs?.src === "string" ? node.attrs.src : ""
+
+  const title =
+    typeof node.attrs?.title === "string"
+      ? node.attrs.title
+      : "Document.pdf"
+
+  out.push(
+    <div
+      key={`pdf-${index}`}
+      className="my-3 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+    >
+      <span className="rounded bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">
+        PDF
+      </span>
+
+      <span className="max-w-[240px] truncate text-sm text-slate-700">
+        {title}
+      </span>
+
+      <a
+        href={src}
+        target="_blank"
+        rel="noreferrer"
+        className="rounded-md bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
+      >
+        Open
+      </a>
+    </div>
+  )
+
+  return
+}
+  
     if (Array.isArray(node.content)) {
       out.push(...renderBlock(node.content))
     }

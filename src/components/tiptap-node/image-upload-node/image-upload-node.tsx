@@ -8,6 +8,8 @@ import { CloseIcon } from "@/components/tiptap-icons/close-icon"
 import "@/components/tiptap-node/image-upload-node/image-upload-node.scss"
 import { focusNextNode, isValidPosition } from "@/lib/tiptap-utils"
 
+import { X } from "lucide-react"
+
 export interface FileItem {
   /**
    * Unique identifier for the file item
@@ -519,19 +521,49 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
     }
   }
 
+  const handleClose = (
+  e: React.MouseEvent<HTMLButtonElement>
+) => {
+  e.preventDefault()
+  e.stopPropagation()
+
+  const pos = props.getPos()
+
+  if (!isValidPosition(pos)) return
+
+  props.editor
+    .chain()
+    .focus()
+    .deleteRange({
+      from: pos,
+      to: pos + props.node.nodeSize,
+    })
+    .run()
+}
+
   const hasFiles = fileItems.length > 0
 
   return (
-    <NodeViewWrapper
-      className="tiptap-image-upload"
-      tabIndex={0}
-      onClick={handleClick}
-    >
-      {!hasFiles && (
-        <ImageUploadDragArea onFile={handleUpload}>
-          <DropZoneContent maxSize={maxSize} limit={limit} />
-        </ImageUploadDragArea>
-      )}
+  <NodeViewWrapper
+    className="tiptap-image-upload relative"
+    tabIndex={0}
+    onClick={handleClick}
+  >
+    {!hasFiles && (
+      <button
+        type="button"
+        onClick={handleClose}
+        className="absolute right-3 top-3 z-20 rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    )}
+
+    {!hasFiles && (
+      <ImageUploadDragArea onFile={handleUpload}>
+        <DropZoneContent maxSize={maxSize} limit={limit} />
+      </ImageUploadDragArea>
+    )}
 
       {hasFiles && (
         <div className="tiptap-image-upload-previews">

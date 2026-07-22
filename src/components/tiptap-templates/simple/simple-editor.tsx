@@ -369,7 +369,7 @@ export function SimpleEditor({
       Selection,
       Focus.configure({
         className: "has-focus",
-        mode: "deepest",
+        mode: "all ",
       }),
       Placeholder.configure({
         placeholder: placeholder ?? (compact ? "Write here…" : "Write something…"),

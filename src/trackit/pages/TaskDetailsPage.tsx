@@ -25,7 +25,6 @@ export function TaskDetailsPage() {
   // Editing enable / disable: page khulte hi band; title/description pe click se on
   const [isEditing, setIsEditing] = useState(false)
 
-  // Reload pe pehle cache se hydrate — "Loading…" sirf pehli baar
   const cached = getCachedTask(taskId)
   const [title, setTitle] = useState(() => cached?.title ?? "")
   const [savedTitle, setSavedTitle] = useState(() => cached?.title ?? "")
@@ -199,7 +198,7 @@ export function TaskDetailsPage() {
                 >
                   Title{isEditing && <span className="text-red-500"> *</span>}
                 </label>
-                {/* Title ya description pe click → editing on */}
+                {/* Title sirf tab editable hai jab description se editing already on ho */}
                 <Input
                   ref={titleInputRef}
                   id="task-details-title"
@@ -245,7 +244,7 @@ export function TaskDetailsPage() {
                     key={String(taskId)}
                     embedded
                     editable={isEditing}
-                    autoFocus={isEditing}
+                    autoFocus={false }
                     placeholder="Click to edit description…"
                     initialContent={savedContent}
                     onEditorReady={(editor) => {
