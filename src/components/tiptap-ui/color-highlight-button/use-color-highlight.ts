@@ -12,7 +12,6 @@ import { useIsBreakpoint } from "@/hooks/use-is-breakpoint"
 import {
   isMarkInSchema,
   isNodeTypeSelected,
-  isExtensionAvailable,
 } from "@/lib/tiptap-utils"
 
 // --- Icons ---
@@ -173,15 +172,10 @@ export function canColorHighlight(
       return false
 
     return editor.can().setMark("highlight")
-  } else {
-    if (!isExtensionAvailable(editor, ["nodeBackground"])) return false
-
-    try {
-      return editor.can().toggleNodeBackgroundColor("test")
-    } catch {
-      return false
-    }
   }
+
+  // node-background extension project me nahi hai
+  return false
 }
 
 /**
@@ -198,25 +192,9 @@ export function isColorHighlightActive(
     return highlightColor
       ? editor.isActive("highlight", { color: highlightColor })
       : editor.isActive("highlight")
-  } else {
-    if (!highlightColor) return false
-
-    try {
-      const { state } = editor
-      const { selection } = state
-
-      const $pos = selection.$anchor
-      for (let depth = $pos.depth; depth >= 0; depth--) {
-        const node = $pos.node(depth)
-        if (node && node.attrs?.backgroundColor === highlightColor) {
-          return true
-        }
-      }
-      return false
-    } catch {
-      return false
-    }
   }
+
+  return false
 }
 
 /**
@@ -231,9 +209,9 @@ export function removeHighlight(
 
   if (mode === "mark") {
     return editor.chain().focus().unsetMark("highlight").run()
-  } else {
-    return editor.chain().focus().unsetNodeBackgroundColor().run()
   }
+
+  return false
 }
 
 /**
@@ -258,7 +236,7 @@ export function shouldShowButton(props: {
   if (mode === "mark") {
     if (!isMarkInSchema("highlight", editor)) return false
   } else {
-    if (!isExtensionAvailable(editor, ["nodeBackground"])) return false
+    return false
   }
 
   if (!editor.isActive("code")) {
@@ -331,18 +309,9 @@ export function useColorHighlight(config: UseColorHighlightConfig) {
       }, 0)
 
       return true
-    } else {
-      const success = editor
-        .chain()
-        .focus()
-        .toggleNodeBackgroundColor(actualColor)
-        .run()
-
-      if (success) {
-        onApplied?.({ color: actualColor, label, mode })
-      }
-      return success
     }
+
+    return false
   }, [canColorHighlightState, actualColor, editor, label, onApplied, mode])
 
   const handleRemoveHighlight = useCallback(() => {

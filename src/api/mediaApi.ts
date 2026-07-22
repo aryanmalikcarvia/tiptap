@@ -6,13 +6,6 @@ export type UploadMediaResponse = {
   url: string;
 };
 
-export type MediaResponse = {
-  cid?: string;
-  url?: string;
-  mediaUrl?: string;
-  [key: string]: unknown;
-};
-
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
@@ -55,15 +48,6 @@ export async function uploadMedia(file: File): Promise<UploadMediaResponse> {
   return data;
 }
 
-// get media 
-export async function getMedia(mediaId: string): Promise<MediaResponse> {
-  const { data } = await apiClient.get<MediaResponse>(
-    `/users/projects/medias/${mediaId}`
-  );
-
-  return data;
-}
-
 /** DELETE  */
 export async function deleteMedia(mediaId: string): Promise<void> {
   await apiClient.delete(`/users/projects/medias/${mediaId}`);
@@ -71,13 +55,4 @@ export async function deleteMedia(mediaId: string): Promise<void> {
 
 export function mediaIdFromCid(cid: string): string {
   return cid.replace(/\.[^/.]+$/, "");
-}
-
-export function resolveMediaUrl(
-  media: MediaResponse,
-  fallbackUrl: string
-): string {
-  if (typeof media.url === "string" && media.url) return media.url;
-  if (typeof media.mediaUrl === "string" && media.mediaUrl) return media.mediaUrl;
-  return fallbackUrl;
 }

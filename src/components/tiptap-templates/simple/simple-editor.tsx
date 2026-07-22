@@ -79,7 +79,6 @@ import { handleMediaImageUpload, MAX_MEDIA_FILE_SIZE } from "@/lib/mediaUpload"
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
-import { content as defaultContent } from "@/components/tiptap-templates/simple/data/content"
 import type { Content, Editor } from "@tiptap/react"
 
 const EMPTY_DOC: Content = {
@@ -93,9 +92,6 @@ export type SimpleEditorProps = {
   embedded?: boolean
   editable?: boolean
   compact?: boolean
-  /** Enter → submit; Shift+Enter → new line */
-  submitOnEnter?: boolean
-  onEnterSubmit?: () => void
   /** editable hone par cursor focus */
   autoFocus?: boolean
   placeholder?: string
@@ -231,8 +227,6 @@ export function SimpleEditor({
   embedded = false,
   editable = true,
   compact = false,
-  submitOnEnter = false,
-  onEnterSubmit,
   autoFocus = false,
   placeholder,
 }: SimpleEditorProps = {}) {
@@ -244,12 +238,8 @@ export function SimpleEditor({
   const toolbarRef = useRef<HTMLDivElement>(null)
   const onReadyRef = useRef(onEditorReady)
   const editorInstanceRef = useRef<Editor | null>(null)
-  const submitOnEnterRef = useRef(submitOnEnter)
-  const onEnterSubmitRef = useRef(onEnterSubmit)
   const editableRef = useRef(editable)
   onReadyRef.current = onEditorReady
-  submitOnEnterRef.current = submitOnEnter
-  onEnterSubmitRef.current = onEnterSubmit
   editableRef.current = editable
 
   useEffect(() => {
@@ -267,25 +257,6 @@ export function SimpleEditor({
         autocapitalize: "off",
         "aria-label": "Main content area, start typing to enter text.",
         class: "simple-editor",
-      },
-      handleKeyDown: (_view, event) => {
-        if (!submitOnEnterRef.current) return false
-        const ed = editorInstanceRef.current
-        if (!ed) return false
-
-        if (event.key === "Enter" && event.shiftKey) {
-          event.preventDefault()
-          ed.chain().focus().setHardBreak().run()
-          return true
-        }
-
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault()
-          onEnterSubmitRef.current?.()
-          return true
-        }
-
-        return false
       },
       handleDOMEvents: {
         click: (view) => {
@@ -369,7 +340,7 @@ export function SimpleEditor({
       Selection,
       Focus.configure({
         className: "has-focus",
-        mode: "all ",
+        mode: "deepest",
       }),
       Placeholder.configure({
         placeholder: placeholder ?? (compact ? "Write here…" : "Write something…"),
@@ -385,10 +356,7 @@ export function SimpleEditor({
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
-    content:
-      initialContent !== undefined
-        ? initialContent
-        : defaultContent || EMPTY_DOC,
+    content: initialContent !== undefined ? initialContent : EMPTY_DOC,
     onCreate: ({ editor: ed }) => {
       editorInstanceRef.current = ed
       onReadyRef.current?.(ed)

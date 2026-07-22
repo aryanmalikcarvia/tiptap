@@ -208,11 +208,12 @@
 .tiptap.ProseMirror.ProseMirror-focused
   p.has-focus.is-empty:has(> .ProseMirror-trailingBreak:only-child)::after {
   content: "";
-  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
   width: 1.5px;
   height: 1.05em;
   background-color: var(--tt-cursor-color, #6229ff);
-  vertical-align: text-bottom;
   animation: tiptap-caret-blink 1s step-end infinite;
   pointer-events: none;
 }

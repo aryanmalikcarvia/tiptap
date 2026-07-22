@@ -1,6 +1,0 @@
-export const content = `
-  
-`;
-
-
-// <h1>Getting started</h1> <p> Welcome to the <em><mark data-color="var(--tt-color-highlight-yellow)" style="background-color: var(--tt-color-highlight-yellow); color: inherit">Simple Editor</mark></em> template! This editor is built using <strong>Tiptap</strong> and provides a flexible rich text editing experience. </p> <h2>Features</h2> <p> Create and format content using common text editing tools. You can make text <strong>bold</strong>, <em>italic</em>, <s>strike through text</s>, and add inline <code>code</code>. </p> <p> Use headings, bullet lists, ordered lists, blockquotes, and other formatting options to organize your content. </p> <h2>Media support</h2> <p> Images can be copied and pasted directly into the editor. Uploaded media is stored using the media upload service and the returned URL is used to display the image inside the document. </p> <p> Video and PDF attachment support can also be added to provide a richer content editing experience. </p> <h2>Keyboard shortcuts</h2> <p> Type markdown or use keyboard shortcuts like <code>⌘+B</code> for <strong>bold</strong> and <code>⌘+I</code> for <em>italic</em>. </p> <blockquote> Start writing, format your content, and add media directly to your document. </blockquote>
