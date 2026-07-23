@@ -5,7 +5,9 @@ import type { NodeViewProps } from "@tiptap/react"
 import { NodeViewWrapper } from "@tiptap/react"
 import { Button } from "@/components/tiptap-ui-primitive/button"
 import { CloseIcon } from "@/components/tiptap-icons/close-icon"
+import { Spinner } from "@/components/ui/spinner"
 import "@/components/tiptap-node/image-upload-node/image-upload-node.scss"
+import "@/components/tiptap-node/media-placeholder-node/media-placeholder-node.scss"
 import { focusNextNode, isValidPosition } from "@/lib/tiptap-utils"
 
 import { X } from "lucide-react"
@@ -351,29 +353,44 @@ interface ImageUploadPreviewProps {
 }
 
 /**
- * Component that displays a preview of an uploading file with progress
+ * Upload preview — spinner + kind placeholder (image / video / PDF)
  */
 const ImageUploadPreview: React.FC<ImageUploadPreviewProps> = ({
   fileItem,
   onRemove,
 }) => {
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+  if (fileItem.status === "uploading") {
+    const kind = fileItem.file.type.startsWith("video/")
+      ? "video"
+      : fileItem.file.type === "application/pdf" ||
+          fileItem.file.name.toLowerCase().endsWith(".pdf")
+        ? "pdf"
+        : fileItem.file.type.startsWith("image/")
+          ? "image"
+          : "other"
+    const label =
+      kind === "image"
+        ? "Uploading image…"
+        : kind === "video"
+          ? "Uploading video…"
+          : kind === "pdf"
+            ? "Uploading PDF…"
+            : "Uploading media…"
+
+    return (
+      <div
+        className="tiptap-media-placeholder-inner"
+        role="status"
+        aria-label={label}
+      >
+        <Spinner size="sm" />
+        <span className="tiptap-media-placeholder-label">{label}</span>
+      </div>
+    )
   }
 
   return (
     <div className="tiptap-image-upload-preview">
-      {fileItem.status === "uploading" && (
-        <div
-          className="tiptap-image-upload-progress"
-          style={{ width: `${fileItem.progress}%` }}
-        />
-      )}
-
       <div className="tiptap-image-upload-preview-content">
         <div className="tiptap-image-upload-file-info">
           <div className="tiptap-image-upload-file-icon">
@@ -383,17 +400,9 @@ const ImageUploadPreview: React.FC<ImageUploadPreviewProps> = ({
             <span className="tiptap-image-upload-text">
               {fileItem.file.name}
             </span>
-            <span className="tiptap-image-upload-subtext">
-              {formatFileSize(fileItem.file.size)}
-            </span>
           </div>
         </div>
         <div className="tiptap-image-upload-actions">
-          {fileItem.status === "uploading" && (
-            <span className="tiptap-image-upload-progress-text">
-              {fileItem.progress}%
-            </span>
-          )}
           <Button
             type="button"
             variant="ghost"
@@ -462,6 +471,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
         const nodes = urls.map((url, index) => {
           const file = files[index]
           const filename = file?.name.replace(/\.[^/.]+$/, "") || "unknown"
+          const cid = url.split("/").pop() || undefined
           const isPdf =
             file?.type === "application/pdf" ||
             file?.name.toLowerCase().endsWith(".pdf")
@@ -469,7 +479,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
           if (file?.type.startsWith("video/")) {
             return {
               type: "video",
-              attrs: { src: url },
+              attrs: { src: url, cid },
             }
           }
 
@@ -478,6 +488,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
               type: "pdf",
               attrs: {
                 src: url,
+                cid,
                 title: file?.name || filename,
               },
             }
@@ -487,6 +498,7 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
             type: extension.options.type || "image",
             attrs: {
               src: url,
+              cid,
               alt: filename,
               title: filename,
             },

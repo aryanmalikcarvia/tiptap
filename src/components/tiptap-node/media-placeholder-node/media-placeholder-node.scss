@@ -1,0 +1,28 @@
+.tiptap-media-placeholder {
+  margin: 0.35rem 0;
+  user-select: none;
+  max-width: 14rem;
+}
+
+.tiptap-media-placeholder-inner {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  min-height: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.4rem 0.7rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+}
+
+.tiptap-media-placeholder-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.2;
+  white-space: nowrap;
+}

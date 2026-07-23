@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { fetchTasks as fetchTasksApi } from "@/api/tasksApi"
 import { getApiErrorMessage } from "@/lib/apiError"
+import { dedupeRequest } from "@/lib/requestDedupe"
 import type { Task } from "@/types/task"
 
 export function useTasks() {
@@ -13,8 +14,9 @@ export function useTasks() {
     setIsPending(true)
     setIsError(false)
     setError(null)
+
     try {
-      const data = await fetchTasksApi()
+      const data = await dedupeRequest("tasks:all", () => fetchTasksApi())
       setTasks(data)
       return data
     } catch (err) {

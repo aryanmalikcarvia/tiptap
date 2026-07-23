@@ -13,6 +13,9 @@ export const PdfNode = Node.create({
       src: {
         default: null,
       },
+      cid: {
+        default: null,
+      },
       title: {
         default: "PDF document",
       },

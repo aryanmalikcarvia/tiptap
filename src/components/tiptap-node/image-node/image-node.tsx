@@ -6,11 +6,14 @@ import { NodeViewWrapper } from "@tiptap/react"
 import { Trash2 } from "lucide-react"
 import { deleteMedia } from "@/api/mediaApi"
 import { mediaIdFromCid, mediaIdFromSrc } from "@/lib/mediaIds"
-import "@/components/tiptap-node/video-node/video-node.scss"
+import "@/components/tiptap-node/image-node/image-node.scss"
 
-export const VideoNodeView = (props: NodeViewProps) => {
+export function ImageNodeView(props: NodeViewProps) {
   const src = String(props.node.attrs.src ?? "")
   const cid = String(props.node.attrs.cid ?? "")
+  const alt = String(props.node.attrs.alt ?? "")
+  const title = String(props.node.attrs.title ?? "")
+  const editable = props.editor.isEditable
 
   const handleDelete = (event: MouseEvent) => {
     event.preventDefault()
@@ -28,27 +31,29 @@ export const VideoNodeView = (props: NodeViewProps) => {
 
   if (!src) {
     return (
-      <NodeViewWrapper className="tiptap-video-node is-empty">
-        <p>Missing video source</p>
+      <NodeViewWrapper className="tiptap-image-node is-empty">
+        <p>Missing image source</p>
       </NodeViewWrapper>
     )
   }
 
   return (
-    <NodeViewWrapper className="tiptap-video-node" data-drag-handle>
-      <div className="tiptap-video-frame">
-        <video src={src} controls playsInline className="tiptap-video-player" />
-        <button
-          type="button"
-          className="tiptap-media-delete"
-          title="Delete"
-          onClick={handleDelete}
-        >
-          <Trash2 size={14} />
-        </button>
+    <NodeViewWrapper className="tiptap-image-node" data-drag-handle>
+      <div className="tiptap-image-frame">
+        <img src={src} alt={alt} title={title || alt} />
+        {editable ? (
+          <button
+            type="button"
+            className="tiptap-media-delete"
+            title="Delete"
+            onClick={handleDelete}
+          >
+            <Trash2 size={14} />
+          </button>
+        ) : null}
       </div>
     </NodeViewWrapper>
   )
 }
 
-export default VideoNodeView
+export default ImageNodeView

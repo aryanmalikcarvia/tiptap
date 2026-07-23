@@ -1,5 +1,5 @@
 // trackit frontend
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type MouseEvent } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import type { Content, Editor } from "@tiptap/react"
@@ -21,6 +21,7 @@ export function TaskDetailsPage() {
   const editorRef = useRef<Editor | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const pendingTitleFocusRef = useRef(false)
+  const [editCaretPos, setEditCaretPos] = useState<number | null>(null)
 
   const [isEditing, setIsEditing] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
@@ -51,19 +52,40 @@ export function TaskDetailsPage() {
     setIsEditing(false)
   }, [taskId, setError])
 
-  useEffect(() => {
-    if (isEditing || !savedContent || !editorRef.current) return
-    editorRef.current.commands.setContent(savedContent)
-  }, [savedContent, isEditing])
-
   const enableEditing = () => {
-    if (!isEditing && !isPending) setIsEditing(true)
+    if (!isEditing && !isPending) {
+      setEditCaretPos(null)
+      setIsEditing(true)
+    }
+  }
+
+  const enableEditingAtClick = (e: MouseEvent) => {
+    if (isEditing || isPending) return
+
+    // Toolbar se pehle hi doc pos nikal lo — coords baad me shift ho jati hain
+    let pos: number | null = null
+    const editor = editorRef.current
+    if (editor && !editor.isDestroyed) {
+      try {
+        const hit = editor.view.posAtCoords({
+          left: e.clientX,
+          top: e.clientY,
+        })
+        pos = hit?.pos ?? null
+      } catch {
+        pos = null
+      }
+    }
+
+    setEditCaretPos(pos)
+    setIsEditing(true)
   }
 
   const enableEditingWithTitleFocus = () => {
     if (isPending) return
     if (!isEditing) {
       pendingTitleFocusRef.current = true
+      setEditCaretPos(null)
       setIsEditing(true)
     }
   }
@@ -73,6 +95,10 @@ export function TaskDetailsPage() {
       pendingTitleFocusRef.current = false
       titleInputRef.current?.focus()
     }
+  }, [isEditing])
+
+  useEffect(() => {
+    if (!isEditing) setEditCaretPos(null)
   }, [isEditing])
 
   const handleCancel = () => {
@@ -201,13 +227,14 @@ export function TaskDetailsPage() {
                   className={`overflow-hidden rounded-xl border border-slate-200 bg-white${
                     isEditing ? " cursor-text" : " cursor-pointer"
                   }`}
-                  onClick={enableEditing}
+                  onClick={enableEditingAtClick}
                 >
                   <SimpleEditor
                     key={String(taskId)}
                     embedded
                     editable={isEditing}
                     autoFocus={false}
+                    initialCaretPos={editCaretPos}
                     initialContent={savedContent}
                     onEditorReady={(editor) => {
                       editorRef.current = editor

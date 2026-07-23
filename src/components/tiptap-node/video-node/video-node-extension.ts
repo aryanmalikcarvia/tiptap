@@ -13,6 +13,9 @@ export const VideoNode = Node.create({
       src: {
         default: null,
       },
+      cid: {
+        default: null,
+      },
     }
   },
  

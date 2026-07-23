@@ -1,8 +1,6 @@
 import axios from "axios"
 
-const TASKS_API_ORIGIN =
-  "https://api.carvia-test.org/poc-office365-service"
-
+const TASKS_API_ORIGIN = "https://api.carvia-test.org/poc-office365-service"
 const MEDIA_API_ORIGIN = "https://api.carvia-test.org/tackit-service"
 
 export const apiClient = axios.create({
@@ -17,12 +15,24 @@ export const mediaApiClient = axios.create({
   headers: {
     Accept: "*/*",
   },
+  withCredentials: true,
 })
 
 mediaApiClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData && config.headers) {
     delete config.headers["Content-Type"]
   }
+
+  const token =
+    String(import.meta.env.VITE_MEDIA_API_TOKEN ?? "").trim() ||
+    (typeof localStorage !== "undefined"
+      ? String(localStorage.getItem("tackit_media_token") ?? "").trim()
+      : "")
+
+  if (token) {
+    config.headers.set("Authorization", `Bearer ${token}`)
+  }
+
   return config
 })
 

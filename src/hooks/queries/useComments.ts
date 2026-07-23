@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { fetchComments as fetchCommentsApi } from "@/api/commentsApi"
 import { getApiErrorMessage } from "@/lib/apiError"
+import { dedupeRequest } from "@/lib/requestDedupe"
 import type { TaskComment } from "@/types/comment"
 import { sortCommentsNewestFirst } from "@/trackit/utils/sortComments"
 
@@ -16,7 +17,9 @@ export function useComments(taskId: string | number) {
     setError(null)
 
     try {
-      const data = await fetchCommentsApi(taskId)
+      const data = await dedupeRequest(`comments:${taskId}`, () =>
+        fetchCommentsApi(taskId)
+      )
       setComments(sortCommentsNewestFirst(data))
       return data
     } catch (err) {

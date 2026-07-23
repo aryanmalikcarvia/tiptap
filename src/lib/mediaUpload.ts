@@ -1,5 +1,7 @@
 import { getApiErrorMessage } from "@/lib/apiError"
-import { uploadMedia } from "@/api/mediaApi"
+import { getMedia, uploadMedia } from "@/api/mediaApi"
+import { mediaIdFromCid, resolveMediaUrl } from "@/lib/mediaIds"
+import { dedupeRequest } from "@/lib/requestDedupe"
 import type { UploadMediaResponse } from "@/types/media"
 
 export const MAX_MEDIA_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -36,7 +38,7 @@ export function getMediaKind(fileOrCid: File | string): MediaKind {
   return "other"
 }
 
-/** POST upload — always returns backend url (no blob fallback). */
+/** POST /media/upload → GET by id (fail pe upload url fallback) */
 export async function uploadAndResolveMedia(
   file: File,
   onProgress?: (event: { progress: number }) => void,
@@ -73,22 +75,29 @@ export async function uploadAndResolveMedia(
     throw new Error("Upload did not return a backend media url")
   }
 
+  onProgress?.({ progress: 60 })
+
+  let url = uploaded.url
+  try {
+    const media = await dedupeRequest(
+      `media:${mediaIdFromCid(uploaded.cid)}`,
+      () => getMedia(mediaIdFromCid(uploaded.cid))
+    )
+    url = resolveMediaUrl(media, uploaded.url)
+  } catch (error) {
+    console.warn("GET media by id failed, using upload url:", error)
+  }
+
+  if (abortSignal?.aborted) {
+    throw new Error("Upload cancelled")
+  }
+
   onProgress?.({ progress: 100 })
 
   return {
     cid: uploaded.cid,
-    url: uploaded.url,
+    url,
     kind: getMediaKind(file),
     name: uploaded.cid,
   }
-}
-
-/** TipTap image upload / paste — backend url only */
-export async function handleMediaImageUpload(
-  file: File,
-  onProgress?: (event: { progress: number }) => void,
-  abortSignal?: AbortSignal
-): Promise<string> {
-  const item = await uploadAndResolveMedia(file, onProgress, abortSignal)
-  return item.url
 }

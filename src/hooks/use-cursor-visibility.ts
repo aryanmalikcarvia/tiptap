@@ -40,14 +40,17 @@ export function useCursorVisibility({
       const { state, view } = editor
       if (!view.hasFocus()) return
 
-      // Get current cursor position coordinates
       const { from } = state.selection
-      const cursorCoords = view.coordsAtPos(from)
+      let cursorCoords: { top: number; bottom: number }
+      try {
+        cursorCoords = view.coordsAtPos(from)
+      } catch {
+        return
+      }
 
       if (windowHeight < rect.height && cursorCoords) {
         const availableSpace = windowHeight - cursorCoords.top
 
-        // If the cursor is hidden behind the overlay or offscreen, scroll it into view
         if (availableSpace < overlayHeight) {
           const targetCursorY = Math.max(windowHeight / 2, overlayHeight)
           const currentScrollY = window.scrollY
@@ -62,7 +65,12 @@ export function useCursorVisibility({
       }
     }
 
-    ensureCursorVisibility()
+    // Only when selection changes while focused — not on every layout/resize
+    if (!editor) return
+    editor.on("selectionUpdate", ensureCursorVisibility)
+    return () => {
+      editor.off("selectionUpdate", ensureCursorVisibility)
+    }
   }, [editor, overlayHeight, windowHeight, rect.height])
 
   return rect

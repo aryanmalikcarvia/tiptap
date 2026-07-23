@@ -1,5 +1,5 @@
 // trackit frontend
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type MouseEvent } from "react"
 import type { Content, Editor } from "@tiptap/react"
 import { Send, Trash2 } from "lucide-react"
 import { sortCommentsNewestFirst } from "@/trackit/utils/sortComments"
@@ -13,7 +13,6 @@ import { useToast } from "@/components/ui/toast"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { isEditorContentEmpty } from "@/trackit/utils/isEditorEmpty"
 import { toEditorContent } from "@/trackit/utils/toEditorContent"
-import { renderTiptapContent } from "@/trackit/utils/renderTiptapContent"
 import { DeleteCommentDialog } from "@/trackit/components/DeleteCommentDialog"
 
 const EMPTY_DOC: Content = {
@@ -68,14 +67,36 @@ function CommentItem({
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editCaretPos, setEditCaretPos] = useState<number | null>(null)
 
   useEffect(() => {
     setSavedContent(toEditorContent(comment.content))
     setError(null)
   }, [comment.id, comment.content])
 
-  const enableEditing = () => {
-    if (!isEditing && !saving) onStartEditing(comment.id)
+  useEffect(() => {
+    if (!isEditing) setEditCaretPos(null)
+  }, [isEditing])
+
+  const enableEditingAtClick = (e: MouseEvent) => {
+    if (isEditing || saving) return
+
+    let pos: number | null = null
+    const editor = editorRef.current
+    if (editor && !editor.isDestroyed) {
+      try {
+        const hit = editor.view.posAtCoords({
+          left: e.clientX,
+          top: e.clientY,
+        })
+        pos = hit?.pos ?? null
+      } catch {
+        pos = null
+      }
+    }
+
+    setEditCaretPos(pos)
+    onStartEditing(comment.id)
   }
 
   const handleCancel = () => {
@@ -99,7 +120,6 @@ function CommentItem({
       const content = editor.getJSON()
       const updated = await updateComment(taskId, comment.id, { content })
       setSavedContent(content as Content)
-      // Editing enable / disable: save ke baad wapas read-only
       onStopEditing()
       onUpdated(updated)
     } catch (err) {
@@ -142,38 +162,41 @@ function CommentItem({
         </div>
       </div>
 
-      {/* Read-only: flat text lines; edit mode: editor box */}
-      {isEditing ? (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <SimpleEditor
-            key={`comment-edit-${comment.id}`}
-            embedded
-            compact
-            editable
-            autoFocus
-            placeholder="Edit comment…"
-            initialContent={savedContent}
-            onEditorReady={(editor) => {
-              editorRef.current = editor
-            }}
-          />
-        </div>
-      ) : (
-        <div
-          role="button"
-          tabIndex={0}
-          className="w-full cursor-text rounded-md px-2 py-1 text-left transition-colors hover:bg-slate-50 hover:text-slate-900"
-          onClick={enableEditing}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault()
-              enableEditing()
-            }
+      <div
+        role={isEditing ? undefined : "button"}
+        tabIndex={isEditing ? undefined : 0}
+        className={`w-full overflow-hidden rounded-xl border border-slate-200 bg-white text-left${
+          isEditing
+            ? ""
+            : " cursor-text transition-colors hover:border-slate-300"
+        }`}
+        onClick={isEditing ? undefined : enableEditingAtClick}
+        onKeyDown={
+          isEditing
+            ? undefined
+            : (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault()
+                  setEditCaretPos(null)
+                  onStartEditing(comment.id)
+                }
+              }
+        }
+      >
+        <SimpleEditor
+          key={`comment-${comment.id}`}
+          embedded
+          compact
+          editable={isEditing}
+          autoFocus={false}
+          initialCaretPos={editCaretPos}
+          placeholder="Edit comment…"
+          initialContent={savedContent}
+          onEditorReady={(editor) => {
+            editorRef.current = editor
           }}
-        >
-          {renderTiptapContent(savedContent)}
-        </div>
-      )}
+        />
+      </div>
 
       {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 

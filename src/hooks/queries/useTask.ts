@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import type { Content } from "@tiptap/react"
 import { fetchTask as fetchTaskApi } from "@/api/tasksApi"
 import { getApiErrorMessage } from "@/lib/apiError"
+import { dedupeRequest } from "@/lib/requestDedupe"
 import type { Task } from "@/types/task"
 import { toEditorContent } from "@/trackit/utils/toEditorContent"
 
@@ -20,7 +21,9 @@ export function useTask(taskId: string | number) {
     setError(null)
 
     try {
-      const data = await fetchTaskApi(taskId)
+      const data = await dedupeRequest(`task:${taskId}`, () =>
+        fetchTaskApi(taskId)
+      )
       setTask(data)
       setTitle(data.title ?? "")
       setSavedTitle(data.title ?? "")

@@ -38,15 +38,28 @@
     caret-color: transparent;
   }
 
-  // Paragraph spacing
-  p:not(:first-child):not(td p):not(th p):not(.is-empty) {
-      margin-top: 12px;
+  // Stable spacing — do NOT tie to .is-empty (placeholder toggles that on click)
+  p:not(:first-child):not(td p):not(th p) {
+    margin-top: 12px;
   }
 
   p:not(td p):not(th p) {
     font-size: 1rem;
     line-height: 1.6;
     font-weight: normal;
+
+    .ProseMirror-trailingBreak {
+      display: inline;
+      line-height: inherit;
+    }
+  }
+
+  /* Empty lines always keep height (focused + unfocused) so layout doesn't jump */
+  p:has(> .ProseMirror-trailingBreak:only-child),
+  blockquote:has(> .ProseMirror-trailingBreak:only-child),
+  li > p:has(> .ProseMirror-trailingBreak:only-child),
+  li > div > p:has(> .ProseMirror-trailingBreak:only-child) {
+    min-height: 1.6em;
   }
 
   // Selection styles
@@ -215,14 +228,6 @@
     position: relative;
   }
 
-  /* Every empty line keeps row height (lists, paragraphs, blockquotes) */
-  p:has(> .ProseMirror-trailingBreak:only-child),
-  blockquote:has(> .ProseMirror-trailingBreak:only-child),
-  li > p:has(> .ProseMirror-trailingBreak:only-child),
-  li > div > p:has(> .ProseMirror-trailingBreak:only-child) {
-    min-height: 1.6em;
-  }
-
   /* Active empty line — fake caret (native caret misaligns on trailingBreak) */
   .has-focus:has(> .ProseMirror-trailingBreak:only-child),
   .has-focus:has(> br:only-child) {
@@ -290,10 +295,4 @@
   }
 }
 
-/* Trailing empty paragraph at doc end — no extra gap */
-.tiptap.ProseMirror > p.is-empty:last-child:has(> .ProseMirror-trailingBreak:only-child),
-.tiptap.ProseMirror > p:has(> .ProseMirror-trailingBreak:only-child):last-child {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  min-height: 0;
-}
+/* Keep trailing empty paragraph clickable (do not collapse height) */

@@ -4,24 +4,24 @@ import type { MouseEvent } from "react"
 import type { NodeViewProps } from "@tiptap/react"
 import { NodeViewWrapper } from "@tiptap/react"
 import { Trash2 } from "lucide-react"
-import { deleteMedia, mediaIdFromCid } from "@/api/mediaApi"
+import { deleteMedia } from "@/api/mediaApi"
+import { mediaIdFromCid, mediaIdFromSrc } from "@/lib/mediaIds"
 import "@/components/tiptap-node/pdf-node/pdf-node.scss"
 
 export const PdfNodeView = (props: NodeViewProps) => {
   const src = String(props.node.attrs.src ?? "")
+  const cid = String(props.node.attrs.cid ?? "")
   const title = String(props.node.attrs.title ?? "PDF document")
 
   const handleDelete = (event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
-    if (src.startsWith("http://") || src.startsWith("https://")) {
-      const cid = src.split("/").pop() || title
-      if (cid) {
-        void deleteMedia(mediaIdFromCid(cid)).catch((error) => {
-          console.warn("Delete media API failed:", error)
-        })
-      }
+    const mediaId = (cid ? mediaIdFromCid(cid) : null) || mediaIdFromSrc(src)
+    if (mediaId) {
+      void deleteMedia(mediaId).catch((error) => {
+        console.warn("Delete media API failed:", error)
+      })
     }
 
     props.deleteNode()

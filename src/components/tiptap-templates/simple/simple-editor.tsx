@@ -5,7 +5,6 @@ import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
-import { Image } from "@tiptap/extension-image"
 import FileHandler from "@tiptap/extension-file-handler"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { TextAlign } from "@tiptap/extension-text-align"
@@ -30,8 +29,10 @@ import {
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension"
+import { MediaImage } from "@/components/tiptap-node/image-node/image-node-extension"
 import { VideoNode } from "@/components/tiptap-node/video-node/video-node-extension"
 import { PdfNode } from "@/components/tiptap-node/pdf-node/pdf-node-extension"
+import { MediaPlaceholderNode } from "@/components/tiptap-node/media-placeholder-node/media-placeholder-node-extension"
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension"
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "@/components/tiptap-node/code-block-node/code-block-node.scss"
@@ -40,6 +41,7 @@ import "@/components/tiptap-node/list-node/list-node.scss"
 import "@/components/tiptap-node/image-node/image-node.scss"
 import "@/components/tiptap-node/video-node/video-node.scss"
 import "@/components/tiptap-node/pdf-node/pdf-node.scss"
+import "@/components/tiptap-node/media-placeholder-node/media-placeholder-node.scss"
 import "@/components/tiptap-node/heading-node/heading-node.scss"
 import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
 
@@ -74,12 +76,31 @@ import { useWindowSize } from "@/hooks/use-window-size"
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 
 // --- Lib ---
-import { handleMediaImageUpload, MAX_MEDIA_FILE_SIZE } from "@/lib/mediaUpload"
+import {
+  MAX_MEDIA_FILE_SIZE,
+  uploadAndResolveMedia,
+} from "@/lib/mediaUpload"
+import { uploadMediaFilesWithPlaceholders } from "@/lib/uploadMediaWithPlaceholder"
+import { resolveMediaInEditor } from "@/lib/resolveMediaInEditor"
 
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
 import type { Content, Editor } from "@tiptap/react"
+import { TextSelection } from "@tiptap/pm/state"
+
+function placeCaretAtPos(editor: Editor, pos: number) {
+  try {
+    const max = editor.state.doc.content.size
+    const safe = Math.max(0, Math.min(pos, max))
+    const selection = TextSelection.near(editor.state.doc.resolve(safe))
+    editor.view.dispatch(editor.state.tr.setSelection(selection))
+    editor.view.dom.focus({ preventScroll: true })
+    editor.view.dom.classList.add("ProseMirror-focused")
+  } catch {
+    editor.commands.focus(undefined, { scrollIntoView: false })
+  }
+}
 
 const EMPTY_DOC: Content = {
   type: "doc",
@@ -94,29 +115,9 @@ export type SimpleEditorProps = {
   compact?: boolean
   /** editable hone par cursor focus */
   autoFocus?: boolean
+  /** Edit enable ke baad caret isi doc position pe (click jahan tha) */
+  initialCaretPos?: number | null
   placeholder?: string
-}
-
-const insertUploadedFile = (
-  editor: Editor,
-  file: File,
-  src: string,
-  pos: number
-) => {
-  const isPdf =
-    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-
-  let node: { type: string; attrs: Record<string, unknown> }
-
-  if (file.type.startsWith("video/")) {
-    node = { type: "video", attrs: { src } }
-  } else if (isPdf) {
-    node = { type: "pdf", attrs: { src, title: file.name } }
-  } else {
-    node = { type: "image", attrs: { src } }
-  }
-
-  editor.chain().focus().insertContentAt(pos, node).run()
 }
 
 const MainToolbarContent = ({
@@ -228,6 +229,7 @@ export function SimpleEditor({
   editable = true,
   compact = false,
   autoFocus = false,
+  initialCaretPos = null,
   placeholder,
 }: SimpleEditorProps = {}) {
   const isMobile = useIsBreakpoint()
@@ -239,6 +241,7 @@ export function SimpleEditor({
   const onReadyRef = useRef(onEditorReady)
   const editorInstanceRef = useRef<Editor | null>(null)
   const editableRef = useRef(editable)
+  const caretAppliedRef = useRef(false)
   onReadyRef.current = onEditorReady
   editableRef.current = editable
 
@@ -264,11 +267,10 @@ export function SimpleEditor({
           const ed = editorInstanceRef.current
           if (!ed || ed.isDestroyed) return false
 
+          // Keep focus without scrolling page to selection
           requestAnimationFrame(() => {
             if (!view.dom.isConnected) return
-            if (!view.hasFocus()) {
-              view.focus()
-            }
+            view.dom.focus({ preventScroll: true })
             view.dom.classList.add("ProseMirror-focused")
           })
           return false
@@ -312,11 +314,12 @@ export function SimpleEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
-      Image.configure({
+      MediaImage.configure({
         allowBase64: true,
       }),
       VideoNode,
       PdfNode,
+      MediaPlaceholderNode,
       FileHandler.configure({
         allowedMimeTypes: [
           "image/png",
@@ -330,20 +333,14 @@ export function SimpleEditor({
           "application/pdf",
         ],
         onPaste: (editor, files) => {
-          // upload async hai — pehle cursor position save
-          const cursorPos = editor.state.selection.from
-          files.forEach((file, index) => {
-            void handleMediaImageUpload(file).then((src) => {
-              insertUploadedFile(editor, file, src, cursorPos + index)
-            })
-          })
+          uploadMediaFilesWithPlaceholders(
+            editor,
+            files,
+            editor.state.selection.from
+          )
         },
         onDrop: (editor, files, pos) => {
-          files.forEach((file, index) => {
-            void handleMediaImageUpload(file).then((src) => {
-              insertUploadedFile(editor, file, src, pos + index)
-            })
-          })
+          uploadMediaFilesWithPlaceholders(editor, files, pos)
         },
       }),
       
@@ -365,7 +362,15 @@ export function SimpleEditor({
         accept: "image/*,video/*,application/pdf,.pdf,.mp4,.webm,.mov",
         maxSize: MAX_MEDIA_FILE_SIZE,
         limit: 3,
-        upload: handleMediaImageUpload,
+        // Local spinner in ImageUploadNode — no global overlay (avoids double loader)
+        upload: async (file, onProgress, abortSignal) => {
+          const item = await uploadAndResolveMedia(
+            file,
+            onProgress,
+            abortSignal
+          )
+          return item.url
+        },
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
@@ -383,16 +388,51 @@ export function SimpleEditor({
   }, [editor])
 
   useEffect(() => {
+    if (!editor || initialContent === undefined) return
+
+    // Read-only: parent content sync. Edit mode: content mat overwrite.
+    if (!editable) {
+      editor.commands.setContent(initialContent)
+    }
+
+    void resolveMediaInEditor(editor)
+  }, [editor, initialContent, editable])
+
+  useEffect(() => {
     if (editor) {
       editor.setEditable(editable)
     }
   }, [editor, editable])
 
+  // Edit on → caret click position pe (warna autoFocus / start)
   useEffect(() => {
-    if (editor && editable && autoFocus) {
-      queueMicrotask(() => editor.commands.focus("start"))
+    if (!editor) return
+
+    if (!editable) {
+      caretAppliedRef.current = false
+      return
     }
-  }, [editor, editable, autoFocus])
+
+    if (caretAppliedRef.current) return
+    caretAppliedRef.current = true
+
+    const apply = () => {
+      if (editor.isDestroyed || !editor.isEditable) return false
+      if (typeof initialCaretPos === "number") {
+        placeCaretAtPos(editor, initialCaretPos)
+      } else if (autoFocus) {
+        editor.commands.focus(undefined, { scrollIntoView: false })
+      }
+      return true
+    }
+
+    queueMicrotask(() => {
+      if (apply()) return
+      requestAnimationFrame(() => {
+        apply()
+      })
+    })
+  }, [editor, editable, initialCaretPos, autoFocus])
 
   useEffect(() => {
     if (!editor || !editable) return
@@ -404,21 +444,20 @@ export function SimpleEditor({
 
     dom.addEventListener("focus", syncFocused)
     dom.addEventListener("blur", syncFocused)
-    editor.on("selectionUpdate", syncFocused)
+    // Do NOT sync on selectionUpdate — briefly clears focus class and reflows layout
     editor.on("focus", syncFocused)
     editor.on("blur", syncFocused)
 
     return () => {
       dom.removeEventListener("focus", syncFocused)
       dom.removeEventListener("blur", syncFocused)
-      editor.off("selectionUpdate", syncFocused)
       editor.off("focus", syncFocused)
       editor.off("blur", syncFocused)
     }
   }, [editor, editable])
 
   const rect = useCursorVisibility({
-    editor,
+    editor: embedded ? null : editor,
     overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
   })
 
@@ -430,7 +469,7 @@ export function SimpleEditor({
 
   return (
     <div
-      className={`simple-editor-wrapper${embedded ? " is-embedded" : ""}${compact ? " is-compact" : ""}${editable ? " is-editable" : ""}`}
+      className={`simple-editor-wrapper relative${embedded ? " is-embedded" : ""}${compact ? " is-compact" : ""}${editable ? " is-editable" : ""}`}
     >
       <EditorContext.Provider value={{ editor }}>
         {/* Editing enable / disable: toolbar sirf editable=true par dikhe */}
@@ -460,11 +499,13 @@ export function SimpleEditor({
           </Toolbar>
         )}
 
-        <EditorContent
-          editor={editor}
-          role="presentation"
-          className="simple-editor-content"
-        />
+        <div className="simple-editor-scroll relative">
+          <EditorContent
+            editor={editor}
+            role="presentation"
+            className="simple-editor-content"
+          />
+        </div>
       </EditorContext.Provider>
     </div>
   )
